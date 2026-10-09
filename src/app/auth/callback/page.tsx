@@ -10,20 +10,29 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const procesarLogin = async () => {
-      // El cliente de Supabase captura automáticamente el código de Google de la URL
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (user) {
-        // Verificamos si ya guardó su WhatsApp anteriormente
-        const whatsapp = user.user_metadata?.whatsapp
+      // 1. Atrapamos el código secreto que Google envía en la URL
+      const urlParams = new URLSearchParams(window.location.search)
+      const code = urlParams.get('code')
+
+      if (code) {
+        // 2. Canjeamos el código por una sesión válida en Supabase
+        const { data } = await supabase.auth.exchangeCodeForSession(code)
         
-        if (!whatsapp) {
-          router.push('/completar-perfil')
-        } else {
-          router.push('/')
+        if (data?.session) {
+          const whatsapp = data.session.user.user_metadata?.whatsapp
+          // Si tiene número va a la tienda, si no, va a completar su perfil
+          router.push(whatsapp ? '/' : '/completar-perfil')
+          return
         }
+      }
+
+      // 3. Respaldo: Si no hay código en la URL, verificamos si ya existe una sesión activa
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const whatsapp = user.user_metadata?.whatsapp
+        router.push(whatsapp ? '/' : '/completar-perfil')
       } else {
-        // Si hubo un error y no hay usuario, lo devolvemos al login
+        // Solo si todo falla, regresamos al login
         router.push('/auth/login')
       }
     }
