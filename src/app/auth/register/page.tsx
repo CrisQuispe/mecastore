@@ -5,9 +5,11 @@ import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import toast, { Toaster } from 'react-hot-toast'
 import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const supabase = createClient()
 
@@ -18,11 +20,16 @@ export default function RegisterPage() {
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
+    const whatsapp = formData.get('whatsapp') as string
 
+    // Registra al usuario y guarda su número de WhatsApp en la base de datos
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        data: {
+          whatsapp: whatsapp // Guarda el número personalizado
+        },
         emailRedirectTo: `${location.origin}/auth/callback`,
       },
     })
@@ -30,7 +37,7 @@ export default function RegisterPage() {
     if (error) {
       toast.error(error.message)
     } else {
-      toast.success('¡Registro exitoso! Revisa tu correo electrónico.')
+      toast.success('¡Registro exitoso! Revisa tu correo.')
       setTimeout(() => router.push('/auth/login'), 2000)
     }
     
@@ -41,7 +48,6 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-950 flex flex-col items-center justify-center p-4 font-sans">
       <Toaster position="top-center" />
       
-      {/* LOGO OFICIAL SOBRE LA CAJA */}
       <Link href="/" className="mb-6 hover:scale-105 transition-transform">
         <span className="text-4xl font-black text-white tracking-tighter uppercase drop-shadow-md">
           Meca<span className="text-red-300">Store</span>
@@ -54,6 +60,16 @@ export default function RegisterPage() {
         
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp</label>
+            <input 
+              type="tel" 
+              name="whatsapp" 
+              required 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
+              placeholder="Ej. 999111222"
+            />
+          </div>
+          <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
             <input 
               type="email" 
@@ -65,14 +81,23 @@ export default function RegisterPage() {
           </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
-            <input 
-              type="password" 
-              name="password" 
-              required 
-              minLength={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
-              placeholder="Mínimo 6 caracteres"
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                required 
+                minLength={6}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium pr-12"
+                placeholder="Mínimo 6 caracteres"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-red-700 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <button 
             type="submit" 

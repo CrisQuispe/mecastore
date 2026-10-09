@@ -1,46 +1,41 @@
 'use client'
 
-import Link from 'next/link'
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Mail, Lock } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import Link from 'next/link'
+import { Eye, EyeOff } from 'lucide-react'
 
 export default function LoginPage() {
+  const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-  const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({ email: '', password: '' })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
+    
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email: formData.email,
-      password: formData.password,
-    })
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
 
     if (error) {
-      toast.error(`Error al ingresar: ${error.message}`)
+      toast.error('Credenciales incorrectas')
       setIsLoading(false)
-      return
+    } else {
+      toast.success('¡Bienvenido de nuevo!')
+      setTimeout(() => router.push('/'), 1500)
     }
-
-    toast.success('¡Bienvenido de nuevo!')
-    setTimeout(() => router.push('/'), 1500)
   }
 
-return (
+  return (
     <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-950 flex flex-col items-center justify-center p-4 font-sans">
       <Toaster position="top-center" />
       
-      {/* LOGO OFICIAL SOBRE LA CAJA */}
       <Link href="/" className="mb-6 hover:scale-105 transition-transform">
         <span className="text-4xl font-black text-white tracking-tighter uppercase drop-shadow-md">
           Meca<span className="text-red-300">Store</span>
@@ -58,21 +53,28 @@ return (
               type="email" 
               name="email" 
               required 
-              onChange={handleChange} 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
               placeholder="ejemplo@correo.com"
             />
           </div>
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
-            <input 
-              type="password" 
-              name="password" 
-              required 
-              onChange={handleChange} 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
-              placeholder="Contraseña"
-            />
+            <div className="relative">
+              <input 
+                type={showPassword ? "text" : "password"} 
+                name="password" 
+                required 
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium pr-12"
+                placeholder="Contraseña"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-3 text-gray-400 hover:text-red-700 transition-colors"
+              >
+                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+              </button>
+            </div>
           </div>
           <button 
             type="submit" 
