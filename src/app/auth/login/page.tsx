@@ -71,7 +71,7 @@ return (
               required 
               onChange={handleChange} 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
-              placeholder="••••••••"
+              placeholder="Contraseña"
             />
           </div>
           <button 
