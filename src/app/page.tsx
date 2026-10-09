@@ -15,11 +15,9 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchInitialData = async () => {
-      // 1. Verificar sesión de usuario
       const { data: { user: currentUser } } = await supabase.auth.getUser()
       setUser(currentUser)
 
-      // 2. Traer productos
       const { data } = await supabase
         .from('products')
         .select(`*, categories(name), product_images(image_url, is_primary)`)
@@ -47,52 +45,55 @@ export default function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+    <div className="min-h-screen bg-red-50/40 font-sans text-gray-900">
       
-      {/* 1. NAVBAR DINÁMICO COMPLETAMENTE RESTAURADO */}
-      <nav className="bg-white">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+      {/* 1. NAVBAR DINÁMICO (Optimizado para Celulares) */}
+      <nav className="bg-white shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-3xl font-black text-red-800 tracking-tighter uppercase">Meca<span className="text-gray-900">Store</span></span>
-          </Link>
+          {/* Logo y Botones de ícono agrupados en móvil */}
+          <div className="flex items-center justify-between w-full sm:w-auto">
+            <Link href="/" className="flex items-center gap-2">
+              <span className="text-2xl sm:text-3xl font-black text-red-800 tracking-tighter uppercase">Meca<span className="text-gray-900">Store</span></span>
+            </Link>
+
+            {/* Acciones Rápidas (Solo visibles en celular como íconos) */}
+            <div className="flex sm:hidden items-center gap-4">
+              {user ? (
+                <>
+                  <Link href="/guardados" className="text-gray-600 hover:text-red-800"><Bookmark className="w-5 h-5" /></Link>
+                  <Link href="/perfil" className="text-gray-600 hover:text-red-800"><User className="w-5 h-5" /></Link>
+                  <button onClick={handleLogout} className="text-red-600 hover:text-red-800"><LogOut className="w-5 h-5" /></button>
+                </>
+              ) : (
+                <Link href="/auth/login" className="text-gray-600 hover:text-red-800"><User className="w-5 h-5" /></Link>
+              )}
+            </div>
+          </div>
           
+          {/* Buscador */}
           <div className="w-full max-w-xl relative group">
             <input 
               type="text" 
-              placeholder="Buscar componentes, herramientas, software..." 
-              className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all text-sm font-medium"
+              placeholder="Buscar componentes..." 
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all text-sm font-medium"
             />
-            <Search className="absolute left-4 top-3 text-gray-400 w-5 h-5" />
+            <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
           </div>
 
-          <div className="flex items-center gap-5">
+          {/* Botones de PC y Botón Vender (Siempre visible) */}
+          <div className="flex items-center gap-4 sm:gap-5 w-full sm:w-auto justify-end">
             {user ? (
-              // VISTA PARA USUARIOS CONECTADOS
               <>
-                <Link href="/guardados" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
-                  <Bookmark className="w-4 h-4" /> Guardados
-                </Link>
-                <Link href="/perfil" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
-                  <User className="w-4 h-4" /> Mi Perfil
-                </Link>
-                <button onClick={handleLogout} className="text-sm font-bold text-red-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
-                  <LogOut className="w-4 h-4" /> Salir
-                </button>
-                <Link href="/vender" className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
-                  <ShoppingBag className="w-4 h-4" /> Vender
-                </Link>
+                <Link href="/guardados" className="hidden sm:flex text-sm font-bold text-gray-600 hover:text-red-800 items-center gap-1.5"><Bookmark className="w-4 h-4" /> Guardados</Link>
+                <Link href="/perfil" className="hidden sm:flex text-sm font-bold text-gray-600 hover:text-red-800 items-center gap-1.5"><User className="w-4 h-4" /> Mi Perfil</Link>
+                <button onClick={handleLogout} className="hidden sm:flex text-sm font-bold text-red-600 hover:text-red-800 items-center gap-1.5"><LogOut className="w-4 h-4" /> Salir</button>
+                <Link href="/vender" className="w-full sm:w-auto text-center justify-center bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"><ShoppingBag className="w-4 h-4" /> Vender</Link>
               </>
             ) : (
-              // VISTA PARA VISITANTES (ESTILO ALIEXPRESS)
               <>
-                <Link href="/auth/login" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
-                  <User className="w-4 h-4" /> Iniciar o Registrarse
-                </Link>
-                {/* Si no está registrado y quiere vender, lo mandamos al login primero */}
-                <Link href="/auth/login" className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
-                  <ShoppingBag className="w-4 h-4" /> Vender
-                </Link>
+                <Link href="/auth/login" className="hidden sm:flex text-sm font-bold text-gray-600 hover:text-red-800 items-center gap-1.5"><User className="w-4 h-4" /> Iniciar o Registrarse</Link>
+                <Link href="/auth/login" className="w-full sm:w-auto text-center justify-center bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-1.5 shadow-sm"><ShoppingBag className="w-4 h-4" /> Vender</Link>
               </>
             )}
           </div>
@@ -100,82 +101,78 @@ export default function HomePage() {
       </nav>
 
       {/* 2. CINTA DE OPCIONES */}
-      <div className="bg-gray-100 border-y border-gray-200 hidden md:block">
-        <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center gap-8 text-sm font-bold text-gray-600 overflow-x-auto">
-          <span className="flex items-center gap-1.5 hover:text-red-700 cursor-pointer transition-colors"><Grid className="w-4 h-4"/> Todo el catálogo</span>
-          <span className="flex items-center gap-1.5 hover:text-red-700 cursor-pointer transition-colors"><Cpu className="w-4 h-4"/> Electrónica</span>
-          <span className="flex items-center gap-1.5 hover:text-red-700 cursor-pointer transition-colors"><Wrench className="w-4 h-4"/> Herramientas</span>
-          <span className="flex items-center gap-1.5 hover:text-red-700 cursor-pointer transition-colors"><Code className="w-4 h-4"/> Software</span>
+      <div className="bg-white/80 border-b border-gray-200 hidden md:block">
+        <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-8 text-xs font-bold text-gray-600 overflow-x-auto">
+          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Grid className="w-3 h-3"/> Todo el catálogo</span>
+          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Cpu className="w-3 h-3"/> Electrónica</span>
+          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Wrench className="w-3 h-3"/> Herramientas</span>
+          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Code className="w-3 h-3"/> Software</span>
         </div>
       </div>
-      
+
       {/* 3. BANNER PRINCIPAL */}
-            <div className="bg-gradient-to-r from-red-950 via-red-800 to-red-900 border-b-2 border-red-950">
-              <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center text-center">
-                <h1 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight uppercase shadow-sm">
-                  Mercado de Ingeniería
-                </h1>
-                <p className="text-sm sm:text-base text-red-100 max-w-2xl font-medium">
-                  Compra y venta directa de componentes, herramientas y proyectos.
-                </p>
-              </div>
-            </div>
+      <div className="bg-gradient-to-r from-red-900 to-red-700 border-b-2 border-red-950">
+        <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center text-center">
+          <h1 className="text-2xl sm:text-3xl font-black text-white mb-1.5 tracking-tight uppercase">
+            Mercado de Ingeniería
+          </h1>
+          <p className="text-sm sm:text-base text-red-100 max-w-xl font-medium leading-tight">
+            Compra y venta directa de componentes, herramientas y proyectos.
+          </p>
+        </div>
+      </div>
 
       {/* 4. CONTENIDO AGRUPADO */}
-      <main className="max-w-7xl mx-auto px-4 py-12">
+      <main className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 animate-pulse">
-             {[1,2,3,4].map(i => <div key={i} className="h-80 bg-gray-200 rounded-lg"></div>)}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
+             {[1,2,3,4].map(i => <div key={i} className="h-56 bg-white/60 rounded-lg"></div>)}
           </div>
         ) : Object.keys(groupedProducts).length === 0 ? (
-          <div className="text-center bg-white p-12 border border-gray-200 rounded-lg">
-            <ShoppingBag className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-bold text-gray-900">Catálogo vacío</h3>
-            <p className="text-gray-500 mt-1 font-medium">Sé el primero en publicar un componente.</p>
+          <div className="text-center bg-white p-10 border border-gray-200 rounded-lg shadow-sm">
+            <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-base font-bold text-gray-900">Catálogo vacío</h3>
           </div>
         ) : (
           Object.entries(groupedProducts).map(([categoryName, items]) => (
-            <section key={categoryName} className="mb-14">
-              <div className="flex items-center justify-between mb-6 border-b-2 border-gray-100 pb-2">
-                <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3 tracking-tight">
+            <section key={categoryName} className="mb-10">
+              <div className="flex items-center justify-between mb-4 border-b border-gray-200 pb-2">
+                <h2 className="text-xl font-black text-gray-900 flex items-center gap-2 tracking-tight">
                   {categoryName.toUpperCase()} 
-                  <span className="text-sm font-bold text-gray-500 bg-gray-200 px-2.5 py-0.5 rounded-md">{items.length}</span>
+                  <span className="text-xs font-bold text-gray-500 bg-white border border-gray-200 px-2 py-0.5 rounded-md">{items.length}</span>
                 </h2>
-                <span className="text-sm font-bold text-red-700 hover:text-red-800 hover:underline cursor-pointer flex items-center">
-                  Ver más <ChevronRight className="w-4 h-4 ml-1" />
-                </span>
               </div>
 
-              {/* GRID AJUSTADO: 2 columnas en celular, 3 en tablet, 4 en PC */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* TARJETAS MÁS COMPACTAS Y PROPORCIONADAS */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
                 {items.map((product) => {
                   const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url 
                                     || product.product_images?.[0]?.image_url 
                                     || '/placeholder.png'
 
                   return (
-                    // ENLACE CONDICIONAL: Si hay usuario va al producto, si no, va al login
                     <Link href={user ? `/producto/${product.id}` : '/auth/login'} key={product.id} className="group">
                       <div className="bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
                         
-                        {/* IMAGEN AJUSTADA: h-32 en celular, h-48 en pantallas más grandes */}
-                        <div className="h-32 md:h-48 w-full bg-gray-100 relative overflow-hidden border-b border-gray-200">
+                        {/* IMAGEN MÁS CORTA */}
+                        <div className="h-24 md:h-32 w-full bg-gray-50 relative overflow-hidden border-b border-gray-100">
                           <img src={primaryImage} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          <div className="absolute top-2 right-2 bg-red-50 px-2 py-1 border border-red-200 text-[10px] font-bold text-red-800 uppercase tracking-widest rounded shadow-sm">
+                          <div className="absolute top-1 right-1 bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm">
                             {product.condition}
                           </div>
                         </div>
 
-                        <div className="p-4 flex flex-col flex-grow">
-                          <h3 className="text-gray-800 font-bold leading-tight line-clamp-2 mb-2 group-hover:text-red-800 transition-colors">
+                        {/* TEXTOS REDUCIDOS Y MÁRGENES AJUSTADOS */}
+                        <div className="p-2 sm:p-3 flex flex-col flex-grow">
+                          <h3 className="text-[11px] sm:text-xs text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
                             {product.title}
                           </h3>
-                          <div className="text-lg md:text-xl font-black text-gray-900 mb-2 mt-auto tracking-tight">
+                          <div className="text-sm md:text-base font-black text-gray-900 mb-1.5 mt-auto">
                             S/ {product.price.toFixed(2)}
                           </div>
                           <div className="flex items-center justify-between mt-auto">
-                            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                              <Tag className="w-3.5 h-3.5" />
+                            <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">
+                              <Tag className="w-2.5 h-2.5" />
                               <span className="truncate">{product.categories?.name}</span>
                             </div>
                           </div>
@@ -190,13 +187,6 @@ export default function HomePage() {
           ))
         )}
       </main>
-
-      <footer className="bg-white border-t border-gray-200 mt-12 py-10">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="font-black text-gray-900 text-xl mb-2 tracking-tighter uppercase">Meca<span className="text-red-800">Store</span></p>
-          <p className="text-sm font-medium text-gray-500">Plataforma comercial para estudiantes de ingeniería.</p>
-        </div>
-      </footer>
     </div>
   )
 }

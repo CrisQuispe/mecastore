@@ -3,101 +3,89 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Lock, Phone } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
+import Link from 'next/link'
 
 export default function RegisterPage() {
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const supabase = createClient()
-  const [isLoading, setIsLoading] = useState(false)
-  const [formData, setFormData] = useState({
-    firstName: '', lastName: '', email: '', password: '', whatsapp: ''
-  })
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
-  }
-
-  const handleRegister = async (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
-
-    let phone = formData.whatsapp.trim()
-    if (!phone.startsWith('+51') && phone.length === 9) phone = `+51${phone}`
+    
+    const formData = new FormData(e.currentTarget)
+    const email = formData.get('email') as string
+    const password = formData.get('password') as string
 
     const { error } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
+      email,
+      password,
       options: {
-        data: {
-          first_name: formData.firstName,
-          last_name: formData.lastName,
-          whatsapp: phone
-        }
-      }
+        emailRedirectTo: `${location.origin}/auth/callback`,
+      },
     })
 
     if (error) {
-      toast.error(`Error: ${error.message}`)
-      setIsLoading(false)
-      return
+      toast.error(error.message)
+    } else {
+      toast.success('¡Registro exitoso! Revisa tu correo electrónico.')
+      setTimeout(() => router.push('/auth/login'), 2000)
     }
-
-    toast.success('¡Registro exitoso! Redirigiendo...')
-    setTimeout(() => router.push('/'), 2000)
+    
+    setIsLoading(false)
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-red-900 via-red-800 to-red-950 flex flex-col items-center justify-center p-4 font-sans">
       <Toaster position="top-center" />
-      <div className="w-full max-w-lg bg-white rounded-2xl shadow-sm p-8 border border-gray-100">
-        <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Registro</h1>
-        </div>
+      
+      {/* LOGO OFICIAL SOBRE LA CAJA */}
+      <Link href="/" className="mb-6 hover:scale-105 transition-transform">
+        <span className="text-4xl font-black text-white tracking-tighter uppercase drop-shadow-md">
+          Meca<span className="text-red-300">Store</span>
+        </span>
+      </Link>
 
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-red-950/20">
+        <h1 className="text-2xl font-black text-gray-900 text-center mb-1 tracking-tight">Crear Cuenta</h1>
+        <p className="text-sm font-medium text-gray-500 text-center mb-6">Únete al Marketplace de Ingeniería</p>
+        
         <form onSubmit={handleRegister} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><User className="h-5 w-5 text-gray-400" /></div>
-                <input name="firstName" type="text" required onChange={handleChange} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
-              <input name="lastName" type="text" required onChange={handleChange} className="w-full px-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
-            </div>
-          </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Mail className="h-5 w-5 text-gray-400" /></div>
-              <input name="email" type="email" required onChange={handleChange} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
-            </div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
+            <input 
+              type="email" 
+              name="email" 
+              required 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
+              placeholder="ejemplo@correo.com"
+            />
           </div>
-
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Número de WhatsApp (Perú)</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Phone className="h-5 w-5 text-gray-400" /></div>
-              <input name="whatsapp" type="tel" required onChange={handleChange} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" />
-            </div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+            <input 
+              type="password" 
+              name="password" 
+              required 
+              minLength={6}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
+              placeholder="Mínimo 6 caracteres"
+            />
           </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><Lock className="h-5 w-5 text-gray-400" /></div>
-              <input name="password" type="password" required onChange={handleChange} className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" minLength={6} />
-            </div>
-          </div>
-
-          <button disabled={isLoading} type="submit" className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition-colors mt-2">
-            {isLoading ? 'Registrando...' : 'Crear Cuenta'}
+          <button 
+            type="submit" 
+            disabled={isLoading}
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3.5 rounded-lg transition-colors mt-2 shadow-md flex justify-center items-center gap-2"
+          >
+            {isLoading ? 'Creando cuenta...' : 'Registrarse'}
           </button>
         </form>
+
+        <p className="text-center text-sm font-medium text-gray-600 mt-6">
+          ¿Ya tienes cuenta? <Link href="/auth/login" className="text-red-700 font-bold hover:underline">Inicia sesión aquí</Link>
+        </p>
       </div>
     </div>
   )
