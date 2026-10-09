@@ -20,7 +20,7 @@ export default function HomePage() {
       setUser(currentUser)
 
       // 2. Traer productos
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from('products')
         .select(`*, categories(name), product_images(image_url, is_primary)`)
         .eq('status', 'active')
@@ -49,7 +49,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
       
-      {/* 1. NAVBAR DINÁMICO */}
+      {/* 1. NAVBAR DINÁMICO COMPLETAMENTE RESTAURADO */}
       <nav className="bg-white">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
           
@@ -68,6 +68,7 @@ export default function HomePage() {
 
           <div className="flex items-center gap-5">
             {user ? (
+              // VISTA PARA USUARIOS CONECTADOS
               <>
                 <Link href="/guardados" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
                   <Bookmark className="w-4 h-4" /> Guardados
@@ -78,16 +79,22 @@ export default function HomePage() {
                 <button onClick={handleLogout} className="text-sm font-bold text-red-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
                   <LogOut className="w-4 h-4" /> Salir
                 </button>
+                <Link href="/vender" className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                  <ShoppingBag className="w-4 h-4" /> Vender
+                </Link>
               </>
             ) : (
-              <Link href="/auth/login" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
-                <User className="w-4 h-4" /> Ingresar
-              </Link>
+              // VISTA PARA VISITANTES (ESTILO ALIEXPRESS)
+              <>
+                <Link href="/auth/login" className="text-sm font-bold text-gray-600 hover:text-red-800 transition-colors flex items-center gap-1.5">
+                  <User className="w-4 h-4" /> Iniciar o Registrarse
+                </Link>
+                {/* Si no está registrado y quiere vender, lo mandamos al login primero */}
+                <Link href="/auth/login" className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
+                  <ShoppingBag className="w-4 h-4" /> Vender
+                </Link>
+              </>
             )}
-            
-            <Link href="/vender" className="bg-red-700 hover:bg-red-800 text-white text-sm font-bold px-5 py-2.5 rounded-lg transition-colors flex items-center gap-2 shadow-sm">
-              <ShoppingBag className="w-4 h-4" /> Vender
-            </Link>
           </div>
         </div>
       </nav>
@@ -139,17 +146,20 @@ export default function HomePage() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* GRID AJUSTADO: 2 columnas en celular, 3 en tablet, 4 en PC */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                 {items.map((product) => {
                   const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url 
                                     || product.product_images?.[0]?.image_url 
                                     || '/placeholder.png'
 
                   return (
-                    <Link href={`/producto/${product.id}`} key={product.id} className="group">
+                    // ENLACE CONDICIONAL: Si hay usuario va al producto, si no, va al login
+                    <Link href={user ? `/producto/${product.id}` : '/auth/login'} key={product.id} className="group">
                       <div className="bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
                         
-                        <div className="h-48 w-full bg-gray-100 relative overflow-hidden border-b border-gray-200">
+                        {/* IMAGEN AJUSTADA: h-32 en celular, h-48 en pantallas más grandes */}
+                        <div className="h-32 md:h-48 w-full bg-gray-100 relative overflow-hidden border-b border-gray-200">
                           <img src={primaryImage} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                           <div className="absolute top-2 right-2 bg-red-50 px-2 py-1 border border-red-200 text-[10px] font-bold text-red-800 uppercase tracking-widest rounded shadow-sm">
                             {product.condition}
@@ -160,13 +170,13 @@ export default function HomePage() {
                           <h3 className="text-gray-800 font-bold leading-tight line-clamp-2 mb-2 group-hover:text-red-800 transition-colors">
                             {product.title}
                           </h3>
-                          <div className="text-2xl font-black text-gray-900 mb-3 mt-auto tracking-tight">
+                          <div className="text-xl md:text-2xl font-black text-gray-900 mb-3 mt-auto tracking-tight">
                             S/ {product.price.toFixed(2)}
                           </div>
                           <div className="flex items-center justify-between mt-auto">
                             <div className="flex items-center gap-1.5 text-xs font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded">
                               <Tag className="w-3.5 h-3.5" />
-                              <span>{product.categories?.name}</span>
+                              <span className="truncate">{product.categories?.name}</span>
                             </div>
                           </div>
                         </div>
