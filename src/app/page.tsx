@@ -108,18 +108,18 @@ export default function HomePage() {
           <span className="flex items-center gap-1.5 hover:text-red-700 cursor-pointer transition-colors"><Code className="w-4 h-4"/> Software</span>
         </div>
       </div>
-
+      
       {/* 3. BANNER PRINCIPAL */}
-      <div className="bg-red-800 border-b-4 border-red-900">
-        <div className="max-w-7xl mx-auto px-4 py-10 sm:py-14 flex flex-col items-center text-center">
-          <h1 className="text-3xl sm:text-4xl font-black text-white mb-3 tracking-tight uppercase">
-            Mercado de Ingeniería
-          </h1>
-          <p className="text-base text-red-100 max-w-2xl font-medium">
-            Compra y venta directa de componentes electrónicos, herramientas, materiales y proyectos universitarios.
-          </p>
-        </div>
-      </div>
+            <div className="bg-gradient-to-r from-red-950 via-red-800 to-red-900 border-b-2 border-red-950">
+              <div className="max-w-7xl mx-auto px-4 py-6 sm:py-8 flex flex-col items-center text-center">
+                <h1 className="text-2xl sm:text-3xl font-black text-white mb-2 tracking-tight uppercase shadow-sm">
+                  Mercado de Ingeniería
+                </h1>
+                <p className="text-sm sm:text-base text-red-100 max-w-2xl font-medium">
+                  Compra y venta directa de componentes, herramientas y proyectos.
+                </p>
+              </div>
+            </div>
 
       {/* 4. CONTENIDO AGRUPADO */}
       <main className="max-w-7xl mx-auto px-4 py-12">
@@ -170,7 +170,7 @@ export default function HomePage() {
                           <h3 className="text-gray-800 font-bold leading-tight line-clamp-2 mb-2 group-hover:text-red-800 transition-colors">
                             {product.title}
                           </h3>
-                          <div className="text-xl md:text-2xl font-black text-gray-900 mb-3 mt-auto tracking-tight">
+                          <div className="text-lg md:text-xl font-black text-gray-900 mb-2 mt-auto tracking-tight">
                             S/ {product.price.toFixed(2)}
                           </div>
                           <div className="flex items-center justify-between mt-auto">

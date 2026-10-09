@@ -52,11 +52,12 @@ export default function LoginPage() {
                 <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <input 
-                name="email" 
                 type="email" 
+                name="email" 
                 required 
                 onChange={handleChange} 
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" 
+                className="bg-white text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all pl-10"
+                placeholder="ejemplo@correo.com"
               />
             </div>
           </div>
@@ -72,12 +73,13 @@ export default function LoginPage() {
                 type="password" 
                 required 
                 onChange={handleChange} 
-                className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-xl outline-none focus:border-blue-500" 
+                className="bg-white text-gray-900 w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all pl-10"
+                placeholder="Contraseña"
               />
             </div>
           </div>
 
-          <button disabled={isLoading} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors mt-6 disabled:bg-blue-400 cursor-pointer">
+          <button disabled={isLoading} type="submit" className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition-colors mt-2">
             {isLoading ? 'Iniciando sesión...' : 'Entrar'}
           </button>
         </form>

@@ -94,7 +94,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
-          <button disabled={isLoading} type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-xl transition-colors mt-6 disabled:bg-blue-400">
+          <button disabled={isLoading} type="submit" className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3 rounded-lg transition-colors mt-2">
             {isLoading ? 'Registrando...' : 'Crear Cuenta'}
           </button>
         </form>
