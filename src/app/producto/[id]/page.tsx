@@ -3,10 +3,8 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useParams, useRouter } from 'next/navigation'
-import { generateWhatsAppLink } from '@/lib/whatsapp'
-import { MapPin, Tag, User, GraduationCap, MessageCircle, ArrowLeft, Heart, Flag } from 'lucide-react'
 import Link from 'next/link'
-import toast, { Toaster } from 'react-hot-toast'
+import { ArrowLeft, ShoppingBag } from 'lucide-react'
 
 export default function ProductDetailPage() {
   const params = useParams()
@@ -14,158 +12,100 @@ export default function ProductDetailPage() {
   const supabase = createClient()
   
   const [product, setProduct] = useState<any>(null)
+  const [images, setImages] = useState<string[]>([])
+  const [activeImage, setActiveImage] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
-  const [mainImage, setMainImage] = useState<string>('/placeholder.png')
-  
-  const [currentUser, setCurrentUser] = useState<any>(null)
-  const [isFavorite, setIsFavorite] = useState(false)
-  const [isReporting, setIsReporting] = useState(false)
 
   useEffect(() => {
-    const fetchProductAndUser = async () => {
-      if (!params.id) return
-      
-      const { data: { user } } = await supabase.auth.getUser()
-      setCurrentUser(user)
-
-      const { data, error } = await supabase
+    const fetchProduct = async () => {
+      const { data } = await supabase
         .from('products')
-        .select('*, categories(name), product_images(image_url, is_primary), profiles(first_name, last_name, whatsapp)')
+        .select(`*, categories(name), product_images(image_url)`)
         .eq('id', params.id)
         .single()
 
       if (data) {
         setProduct(data)
-        const primaryImg = data.product_images?.find((img: any) => img.is_primary)?.image_url || data.product_images?.[0]?.image_url || '/placeholder.png'
-        setMainImage(primaryImg)
-
-        if (user) {
-          const { data: favData } = await supabase
-            .from('favorites')
-            .select('id')
-            .eq('user_id', user.id)
-            .eq('product_id', params.id)
-            .single()
-          
-          if (favData) setIsFavorite(true)
-        }
+        const imgUrls = data.product_images?.map((img: any) => img.image_url) || ['/placeholder.png']
+        setImages(imgUrls)
+        setActiveImage(imgUrls[0])
       }
       setIsLoading(false)
     }
-    fetchProductAndUser()
+    fetchProduct()
   }, [params.id, supabase])
 
-  const handleWhatsApp = () => {
-    if (product.profiles?.whatsapp) {
-      const link = generateWhatsAppLink(product.profiles.whatsapp, product.title, product.price)
-      window.open(link, '_blank')
-    }
+  if (isLoading) {
+    return <div className="min-h-screen bg-[#fdf4f4] flex items-center justify-center font-bold">Cargando producto...</div>
   }
 
-  const toggleFavorite = async () => {
-    if (!currentUser) {
-      toast.error('Debes iniciar sesión para guardar productos.')
-      return router.push('/auth/login')
-    }
-
-    if (isFavorite) {
-      await supabase.from('favorites').delete().eq('user_id', currentUser.id).eq('product_id', product.id)
-      setIsFavorite(false)
-      toast.success('Eliminado de favoritos')
-    } else {
-      await supabase.from('favorites').insert({ user_id: currentUser.id, product_id: product.id })
-      setIsFavorite(true)
-      toast.success('Guardado en favoritos')
-    }
+  if (!product) {
+    return <div className="min-h-screen bg-[#fdf4f4] flex items-center justify-center font-bold">Producto no encontrado.</div>
   }
-
-  const handleReport = async () => {
-    if (!currentUser) {
-      toast.error('Debes iniciar sesión para reportar.')
-      return router.push('/auth/login')
-    }
-
-    const reason = window.prompt('¿Por qué reportas esta publicación? (Ej: Spam, Producto falso, Ofensivo)')
-    if (!reason) return
-
-    setIsReporting(true)
-    const { error } = await supabase.from('reports').insert({
-      reporter_id: currentUser.id,
-      product_id: product.id,
-      reason: reason
-    })
-
-    setIsReporting(false)
-    if (error) {
-      toast.error('Error al enviar el reporte.')
-    } else {
-      toast.success('Reporte enviado al administrador.')
-    }
-  }
-
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center text-gray-500">Cargando detalles...</div>
-  if (!product) return <div className="min-h-screen flex items-center justify-center text-gray-500">Producto no encontrado</div>
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
-      <Toaster position="top-center" />
-      <nav className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-gray-500 hover:text-gray-900 flex items-center gap-2">
-            <ArrowLeft className="w-5 h-5" /> Volver al inicio
-          </Link>
-          <button onClick={handleReport} className="text-red-500 hover:text-red-700 text-sm flex items-center gap-1 font-medium transition-colors">
-            <Flag className="w-4 h-4" /> Reportar
-          </button>
-        </div>
-      </nav>
+    <div className="min-h-screen bg-[#fdf4f4] dark:bg-[#fdf4f4] font-sans text-gray-900 dark:text-gray-900 p-4 sm:p-8">
+      <div className="max-w-5xl mx-auto">
+        
+        {/* Botón Volver */}
+        <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-red-700 font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-lg shadow-sm w-fit">
+          <ArrowLeft className="w-5 h-5" /> Volver al catálogo
+        </button>
 
-      <main className="max-w-5xl mx-auto px-4 mt-8">
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col md:flex-row">
+        <div className="bg-white dark:bg-white rounded-2xl shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row">
           
-          <div className="md:w-1/2 bg-gray-100 min-h-[300px] relative">
-            <img src={mainImage} alt={product.title} className="w-full h-full object-cover" />
-            <button 
-              onClick={toggleFavorite}
-              className="absolute top-4 right-4 p-3 bg-white/90 backdrop-blur-sm rounded-full shadow-sm hover:scale-105 transition-transform"
-            >
-              <Heart className={`w-6 h-6 ${isFavorite ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} />
-            </button>
+          {/* SECCIÓN IZQUIERDA: GALERÍA TIPO ALIEXPRESS */}
+          <div className="w-full md:w-3/5 p-4 sm:p-6 flex flex-col-reverse md:flex-row gap-4 bg-gray-50 border-r border-gray-100">
+            
+            {/* Miniaturas (Columna en PC, Fila en Celular) */}
+            <div className="flex md:flex-col gap-3 overflow-x-auto md:overflow-y-auto md:w-24 shrink-0 scrollbar-hide py-1">
+              {images.map((img, idx) => (
+                <button 
+                  key={idx} 
+                  onClick={() => setActiveImage(img)}
+                  className={`w-16 md:w-full aspect-square shrink-0 rounded-lg overflow-hidden border-2 transition-all ${activeImage === img ? 'border-red-700 ring-2 ring-red-700/20 opacity-100' : 'border-gray-200 opacity-60 hover:opacity-100'}`}
+                >
+                  <img src={img} alt={`Miniatura ${idx + 1}`} className="w-full h-full object-cover bg-white" />
+                </button>
+              ))}
+            </div>
+
+            {/* Imagen Principal */}
+            <div className="flex-1 bg-white rounded-xl border border-gray-200 overflow-hidden relative min-h-[300px] md:min-h-[500px]">
+              <img src={activeImage} alt={product.title} className="w-full h-full object-contain absolute inset-0" />
+            </div>
           </div>
 
-          <div className="md:w-1/2 p-8 flex flex-col">
-            <div className="flex justify-between items-start mb-2">
-              <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-md">{product.condition}</span>
-              <span className="text-sm text-gray-500 flex items-center gap-1"><Tag className="w-4 h-4" /> {product.categories?.name}</span>
+          {/* SECCIÓN DERECHA: INFO DEL PRODUCTO */}
+          <div className="w-full md:w-2/5 p-6 sm:p-8 flex flex-col">
+            <div className="mb-2 bg-red-100 text-red-800 text-xs font-black uppercase tracking-wider px-3 py-1 rounded w-fit">
+              {product.condition}
             </div>
-
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.title}</h1>
-            <div className="text-3xl font-bold text-blue-600 mb-6">S/ {product.price.toFixed(2)}</div>
-
-            <div className="space-y-4 mb-8 text-gray-600 flex-grow">
-              <div className="flex items-center gap-2">
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-1">Descripción:</h3>
-                <p className="text-gray-600 whitespace-pre-wrap leading-relaxed">{product.description}</p>
-              </div>
+            
+            <h1 className="text-2xl sm:text-3xl font-black text-gray-900 leading-tight mb-4">
+              {product.title}
+            </h1>
+            
+            <div className="text-4xl font-black text-red-700 mb-6">
+              S/ {product.price.toFixed(2)}
             </div>
-
-            <div className="bg-gray-50 rounded-xl p-4 mb-6 border border-gray-100">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <User className="w-4 h-4" /> Información del vendedor
-              </h3>
-              <p className="text-gray-700 font-medium mb-1">{product.profiles?.first_name} {product.profiles?.last_name}</p>
-              <p className="text-sm text-gray-500 flex items-center gap-1">
+            
+            <div className="mb-6 pb-6 border-b border-gray-100">
+              <h3 className="text-sm font-bold text-gray-500 mb-2 uppercase tracking-wide">Descripción</h3>
+              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                {product.description}
               </p>
             </div>
 
-            <button onClick={handleWhatsApp} className="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold py-4 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm">
-              <MessageCircle className="w-6 h-6" /> Contactar al vendedor
-            </button>
+            <div className="mt-auto space-y-4">
+              <button className="w-full bg-red-700 hover:bg-red-800 text-white font-black py-4 rounded-xl shadow-lg shadow-red-700/30 transition-all flex justify-center items-center gap-2 text-lg">
+                <ShoppingBag className="w-5 h-5" /> Contactar al Vendedor
+              </button>
+            </div>
           </div>
+
         </div>
-      </main>
+      </div>
     </div>
   )
 }

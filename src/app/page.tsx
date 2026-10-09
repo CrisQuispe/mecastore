@@ -2,9 +2,75 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, LogOut, Bookmark } from 'lucide-react'
+import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, LogOut, Bookmark, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+
+// --- NUEVO COMPONENTE: TARJETA DE PRODUCTO CON CARRUSEL TIPO ALIEXPRESS ---
+const ProductCard = ({ product, user }: { product: any, user: any }) => {
+  const [currentImg, setCurrentImg] = useState(0)
+  const images = product.product_images?.length > 0 
+    ? product.product_images.map((img: any) => img.image_url) 
+    : ['/placeholder.png']
+
+  const nextImage = (e: React.MouseEvent) => {
+    e.preventDefault() // Evita que se abra la página del producto al hacer clic en la flecha
+    setCurrentImg((prev) => (prev + 1) % images.length)
+  }
+
+  const prevImage = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setCurrentImg((prev) => (prev - 1 + images.length) % images.length)
+  }
+
+  return (
+    <Link href={user ? `/producto/${product.id}` : '/auth/login'} className="group block h-full">
+      <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
+        
+        {/* IMAGEN MÁS ALTA (h-40 a h-52) PARA QUE NO SE VEA APLASTADA */}
+        <div className="h-40 md:h-52 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100 group/image">
+          <img src={images[currentImg]} alt={product.title} className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-500" />
+          
+          <div className="absolute top-2 right-2 bg-white/90 dark:bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm z-10">
+            {product.condition}
+          </div>
+
+          {/* FLECHAS Y PUNTITOS (Solo si hay más de 1 imagen) */}
+          {images.length > 1 && (
+            <>
+              <button onClick={prevImage} className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 rounded-full p-1 opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-white z-10 shadow-sm">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button onClick={nextImage} className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 rounded-full p-1 opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-white z-10 shadow-sm">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+                {images.map((_: any, i: number) => (
+                  <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentImg ? 'bg-red-600 scale-110' : 'bg-white/70'}`} />
+                ))}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="p-3 flex flex-col flex-grow">
+          <h3 className="text-xs md:text-sm text-gray-800 dark:text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
+            {product.title}
+          </h3>
+          <div className="text-base md:text-xl font-black text-gray-900 dark:text-gray-900 mb-1.5 mt-auto">
+            S/ {product.price.toFixed(2)}
+          </div>
+          <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
+            <Tag className="w-3 h-3" />
+            <span className="truncate">{product.categories?.name}</span>
+          </div>
+        </div>
+
+      </div>
+    </Link>
+  )
+}
+// ----------------------------------------------------------------------
 
 export default function HomePage() {
   const supabase = createClient()
@@ -47,15 +113,13 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#fdf4f4] dark:bg-[#fdf4f4] font-sans text-gray-900 dark:text-gray-900">
       
-      {/* 1. NAVBAR DINÁMICO */}
+      {/* 1. NAVBAR */}
       <nav className="bg-white dark:bg-white shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-          
           <div className="flex items-center justify-between w-full sm:w-auto">
             <Link href="/" className="flex items-center gap-2">
               <span className="text-2xl sm:text-3xl font-black text-red-800 tracking-tighter uppercase">Meca<span className="text-gray-900 dark:text-gray-900">Store</span></span>
             </Link>
-
             <div className="flex sm:hidden items-center gap-4">
               {user ? (
                 <>
@@ -122,7 +186,7 @@ export default function HomePage() {
       <main className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
-             {[1,2,3,4].map(i => <div key={i} className="h-56 bg-white/60 dark:bg-white/60 rounded-lg"></div>)}
+             {[1,2,3,4].map(i => <div key={i} className="h-64 bg-white/60 dark:bg-white/60 rounded-lg"></div>)}
           </div>
         ) : Object.keys(groupedProducts).length === 0 ? (
           <div className="text-center bg-white dark:bg-white p-10 border border-gray-200 rounded-lg shadow-sm">
@@ -140,41 +204,9 @@ export default function HomePage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
-                {items.map((product) => {
-                  const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url 
-                                    || product.product_images?.[0]?.image_url 
-                                    || '/placeholder.png'
-
-                  return (
-                    <Link href={user ? `/producto/${product.id}` : '/auth/login'} key={product.id} className="group">
-                      <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
-                        
-                        <div className="h-24 md:h-32 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100">
-                          <img src={primaryImage} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                          <div className="absolute top-1 right-1 bg-white/90 dark:bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm">
-                            {product.condition}
-                          </div>
-                        </div>
-
-                        <div className="p-2 sm:p-3 flex flex-col flex-grow">
-                          <h3 className="text-[11px] sm:text-xs text-gray-800 dark:text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
-                            {product.title}
-                          </h3>
-                          <div className="text-sm md:text-base font-black text-gray-900 dark:text-gray-900 mb-1.5 mt-auto">
-                            S/ {product.price.toFixed(2)}
-                          </div>
-                          <div className="flex items-center justify-between mt-auto">
-                            <div className="flex items-center gap-1 text-[9px] sm:text-[10px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded">
-                              <Tag className="w-2.5 h-2.5" />
-                              <span className="truncate">{product.categories?.name}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                      </div>
-                    </Link>
-                  )
-                })}
+                {items.map((product) => (
+                  <ProductCard key={product.id} product={product} user={user} />
+                ))}
               </div>
             </section>
           ))
