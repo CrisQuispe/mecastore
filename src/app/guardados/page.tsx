@@ -2,98 +2,140 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { Bookmark, ArrowLeft, Trash2 } from 'lucide-react'
+import { ArrowLeft, Trash2, Bookmark, Tag } from 'lucide-react'
+import toast, { Toaster } from 'react-hot-toast'
 
 export default function GuardadosPage() {
-  const supabase = createClient()
-  const router = useRouter()
-  const [favorites, setFavorites] = useState<any[]>([])
+  const [savedItems, setSavedItems] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const supabase = createClient()
 
   useEffect(() => {
-    const fetchFavorites = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      if (!currentUser) return router.push('/auth/login')
-      
-      setUser(currentUser)
+    fetchSavedProducts()
+  }, [])
 
-      // Traer la tabla de favoritos unida a los productos
+  const fetchSavedProducts = async () => {
+    setIsLoading(true)
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (user) {
+      // Buscamos los guardados del usuario y cruzamos los datos con la tabla de productos
       const { data } = await supabase
-        .from('favorites')
+        .from('saved_products')
         .select(`
           id,
           product_id,
-          products ( *, product_images(image_url, is_primary) )
+          products (
+            id,
+            title,
+            price,
+            condition,
+            categories(name),
+            product_images(image_url, is_primary)
+          )
         `)
-        .eq('user_id', currentUser.id)
+        .eq('user_id', user.id)
         .order('created_at', { ascending: false })
 
-      if (data) setFavorites(data)
-      setIsLoading(false)
+      if (data) {
+        // Filtramos por si algún producto fue borrado por el vendedor pero seguía guardado
+        setSavedItems(data.filter(item => item.products != null))
+      }
     }
-    fetchFavorites()
-  }, [router, supabase])
-
-  const removeFavorite = async (favoriteId: string) => {
-    await supabase.from('favorites').delete().eq('id', favoriteId)
-    setFavorites(favorites.filter(fav => fav.id !== favoriteId))
+    setIsLoading(false)
   }
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center font-bold text-gray-500">Cargando tus guardados...</div>
+  const removeSavedItem = async (savedId: number, e: React.MouseEvent) => {
+    e.preventDefault() // Evita que al hacer clic en borrar nos lleve a la página del producto
+    
+    const { error } = await supabase.from('saved_products').delete().eq('id', savedId)
+    
+    if (!error) {
+      setSavedItems(prev => prev.filter(item => item.id !== savedId))
+      toast.success('Producto eliminado de tu lista')
+    } else {
+      toast.error('Hubo un error al eliminar')
+    }
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      <nav className="bg-white border-b border-gray-200 px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
-          <Link href="/" className="text-gray-600 hover:text-red-800 flex items-center gap-2 font-bold transition-colors">
-            <ArrowLeft className="w-5 h-5" /> Volver a MecaStore
-          </Link>
+    <div className="min-h-screen bg-[#fdf4f4] dark:bg-[#fdf4f4] font-sans text-gray-900 dark:text-gray-900 p-4 sm:p-8">
+      <Toaster position="top-center" />
+      <div className="max-w-5xl mx-auto">
+        
+        {/* ENCABEZADO */}
+        <Link href="/" className="inline-flex items-center gap-2 text-gray-600 hover:text-red-700 font-bold mb-6 transition-colors bg-white px-4 py-2 rounded-lg shadow-sm">
+          <ArrowLeft className="w-5 h-5" /> Volver a MecaStore
+        </Link>
+
+        <div className="flex items-center gap-3 mb-8">
+          <Bookmark className="w-8 h-8 text-red-700 fill-current" />
+          <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight uppercase">Mis Productos Guardados</h1>
         </div>
-      </nav>
 
-      <main className="max-w-4xl mx-auto px-4 mt-8">
-        <h1 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-tight">
-          <Bookmark className="w-6 h-6 text-red-700" /> Mis Productos Guardados
-        </h1>
-
-        {favorites.length === 0 ? (
-          <div className="bg-white p-12 rounded-lg border border-gray-200 text-center">
-            <p className="text-gray-500 font-medium">Aún no has guardado ningún producto para comprar después.</p>
+        {/* CONTENIDO */}
+        {isLoading ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 animate-pulse">
+             {[1,2,3,4].map(i => <div key={i} className="h-64 bg-white/60 rounded-lg"></div>)}
+          </div>
+        ) : savedItems.length === 0 ? (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center flex flex-col items-center">
+            <Bookmark className="w-16 h-16 text-gray-300 mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Aún no has guardado ningún producto</h3>
+            <p className="text-gray-500 font-medium">Explora el catálogo y guarda los componentes que te interesen para comprarlos después.</p>
+            <Link href="/" className="mt-6 bg-red-700 hover:bg-red-800 text-white font-bold py-2.5 px-6 rounded-lg transition-colors">
+              Explorar catálogo
+            </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {favorites.map((fav) => {
-              const product = fav.products
-              if (!product) return null
-              const img = product.product_images?.find((i:any) => i.is_primary)?.image_url || product.product_images?.[0]?.image_url || '/placeholder.png'
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {savedItems.map((saved) => {
+              const product = saved.products
+              const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url 
+                                || product.product_images?.[0]?.image_url 
+                                || '/placeholder.png'
 
               return (
-                <div key={fav.id} className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm flex flex-col">
-                  <div className="h-40 w-full bg-gray-100 relative">
-                    <img src={img} alt={product.title} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="p-4 flex flex-col flex-grow">
-                    <h3 className="font-bold text-gray-800 line-clamp-1 mb-1">{product.title}</h3>
-                    <p className="text-lg font-black text-gray-900 mb-4">S/ {product.price.toFixed(2)}</p>
+                <Link href={`/producto/${product.id}`} key={saved.id} className="group block h-full">
+                  <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm relative">
                     
-                    <div className="mt-auto flex gap-2">
-                      <Link href={`/producto/${product.id}`} className="flex-1 bg-red-50 hover:bg-red-100 text-red-800 text-center text-xs font-bold py-2 rounded transition-colors">
-                        Ver Detalles
-                      </Link>
-                      <button onClick={() => removeFavorite(fav.id)} className="bg-gray-100 hover:bg-red-600 hover:text-white text-gray-500 px-3 py-2 rounded transition-colors">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                    {/* Botón flotante para eliminar de guardados */}
+                    <button 
+                      onClick={(e) => removeSavedItem(saved.id, e)}
+                      className="absolute top-2 right-2 z-10 bg-white/90 hover:bg-red-100 text-gray-400 hover:text-red-700 p-2 rounded-full shadow-sm transition-colors"
+                      title="Quitar de guardados"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+
+                    <div className="h-32 md:h-40 w-full bg-gray-50 relative overflow-hidden border-b border-gray-100">
+                      <img src={primaryImage} alt={product.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                      <div className="absolute top-2 left-2 bg-white/90 px-1.5 py-0.5 text-[9px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm">
+                        {product.condition}
+                      </div>
                     </div>
+
+                    <div className="p-3 flex flex-col flex-grow">
+                      <h3 className="text-xs md:text-sm text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
+                        {product.title}
+                      </h3>
+                      <div className="text-base md:text-xl font-black text-gray-900 mb-2 mt-auto">
+                        S/ {product.price.toFixed(2)}
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
+                        <Tag className="w-3 h-3" />
+                        <span className="truncate">{product.categories?.name}</span>
+                      </div>
+                    </div>
+
                   </div>
-                </div>
+                </Link>
               )
             })}
           </div>
         )}
-      </main>
+      </div>
     </div>
   )
 }
