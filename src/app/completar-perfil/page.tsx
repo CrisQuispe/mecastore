@@ -17,12 +17,20 @@ export default function CompletarPerfilPage() {
     const formData = new FormData(e.currentTarget)
     const firstName = (formData.get('firstName') as string)?.trim()
     const lastName = (formData.get('lastName') as string)?.trim()
-    const whatsapp = (formData.get('whatsapp') as string)?.trim()
+    let whatsappInput = (formData.get('whatsapp') as string)?.trim() || ''
+
+    // Limpiar caracteres no numéricos
+    let cleanPhone = whatsappInput.replace(/\D/g, '')
+
+    // Si tiene 9 dígitos (ej. 997688441), le anteponemos el código de Perú 51
+    if (cleanPhone.length === 9) {
+      cleanPhone = `51${cleanPhone}`
+    }
 
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // 1. Intentar actualizar o insertar en la tabla 'profiles'
+      // 1. Guardar o actualizar en la tabla 'profiles'
       const { error: dbError } = await supabase
         .from('profiles')
         .upsert({
@@ -30,15 +38,15 @@ export default function CompletarPerfilPage() {
           email: user.email,
           first_name: firstName,
           last_name: lastName || null,
-          whatsapp: whatsapp
+          whatsapp: cleanPhone
         })
 
-      // 2. Guardar datos en los metadatos de Auth
+      // 2. Guardar en los metadatos de Auth
       const { error: authError } = await supabase.auth.updateUser({
         data: { 
           first_name: firstName,
           last_name: lastName,
-          whatsapp: whatsapp 
+          whatsapp: cleanPhone 
         }
       })
 
@@ -95,13 +103,20 @@ export default function CompletarPerfilPage() {
 
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp *</label>
-            <input 
-              type="tel" 
-              name="whatsapp" 
-              required 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
-              placeholder="Ej. 999999999"
-            />
+            <div className="flex rounded-lg overflow-hidden border border-gray-300 focus-within:border-red-700 focus-within:ring-1 focus-within:ring-red-700 transition-all">
+              <span className="bg-gray-100 px-3.5 py-3 text-gray-700 font-bold border-r border-gray-300 flex items-center gap-1 shrink-0 text-sm">
+                🇵🇪 +51
+              </span>
+              <input 
+                type="tel" 
+                name="whatsapp" 
+                required 
+                maxLength={9}
+                className="w-full px-4 py-3 outline-none bg-white text-gray-900 font-medium"
+                placeholder=""
+              />
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1 font-medium">Ingresa tus 9 dígitos. El código de Perú (+51) se agrega automáticamente[cite: 21].</p>
           </div>
 
           <button 
