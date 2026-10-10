@@ -22,7 +22,7 @@ export default function CompletarPerfilPage() {
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // 1. Guardar o actualizar en la tabla 'profiles' de Supabase DB
+      // 1. Intentar actualizar o insertar en la tabla 'profiles'
       const { error: dbError } = await supabase
         .from('profiles')
         .upsert({
@@ -33,7 +33,7 @@ export default function CompletarPerfilPage() {
           whatsapp: whatsapp
         })
 
-      // 2. Guardar en los metadatos de Supabase Auth
+      // 2. Guardar datos en los metadatos de Auth
       const { error: authError } = await supabase.auth.updateUser({
         data: { 
           first_name: firstName,
@@ -42,8 +42,12 @@ export default function CompletarPerfilPage() {
         }
       })
 
-      if (dbError || authError) {
-        toast.error('Error al guardar la información')
+      if (dbError) {
+        console.error('Error BD:', dbError)
+        toast.error(`Error BD: ${dbError.message}`)
+      } else if (authError) {
+        console.error('Error Auth:', authError)
+        toast.error(`Error Auth: ${authError.message}`)
       } else {
         toast.success('¡Perfil completado con éxito!')
         setTimeout(() => router.push('/'), 1200)
@@ -73,7 +77,7 @@ export default function CompletarPerfilPage() {
               name="firstName" 
               required 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
-              placeholder="Ej. Cristofer"
+              placeholder=""
             />
           </div>
 
@@ -85,7 +89,7 @@ export default function CompletarPerfilPage() {
               type="text" 
               name="lastName" 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
-              placeholder="Ej. Quispe"
+              placeholder=""
             />
           </div>
 
@@ -96,7 +100,7 @@ export default function CompletarPerfilPage() {
               name="whatsapp" 
               required 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
-              placeholder="Ej. +51 999111222"
+              placeholder="Ej. 999999999"
             />
           </div>
 
