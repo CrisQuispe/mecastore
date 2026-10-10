@@ -10,27 +10,47 @@ export default function CompletarPerfilPage() {
   const router = useRouter()
   const supabase = createClient()
 
-  const handleSaveWhatsApp = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSaveProfile = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setIsLoading(true)
 
     const formData = new FormData(e.currentTarget)
-    const whatsapp = formData.get('whatsapp') as string
+    const firstName = (formData.get('firstName') as string)?.trim()
+    const lastName = (formData.get('lastName') as string)?.trim()
+    const whatsapp = (formData.get('whatsapp') as string)?.trim()
 
     const { data: { user } } = await supabase.auth.getUser()
 
     if (user) {
-      // Guardamos el número en los metadatos del usuario en Supabase Auth
-      const { error } = await supabase.auth.updateUser({
-        data: { whatsapp: whatsapp }
+      // 1. Guardar o actualizar en la tabla 'profiles' de Supabase DB
+      const { error: dbError } = await supabase
+        .from('profiles')
+        .upsert({
+          id: user.id,
+          email: user.email,
+          first_name: firstName,
+          last_name: lastName || null,
+          whatsapp: whatsapp
+        })
+
+      // 2. Guardar en los metadatos de Supabase Auth
+      const { error: authError } = await supabase.auth.updateUser({
+        data: { 
+          first_name: firstName,
+          last_name: lastName,
+          whatsapp: whatsapp 
+        }
       })
 
-      if (error) {
-        toast.error('Error al guardar el número')
+      if (dbError || authError) {
+        toast.error('Error al guardar la información')
       } else {
         toast.success('¡Perfil completado con éxito!')
         setTimeout(() => router.push('/'), 1200)
       }
+    } else {
+      toast.error('No se encontró sesión activa')
+      router.push('/auth/login')
     }
     setIsLoading(false)
   }
@@ -40,28 +60,52 @@ export default function CompletarPerfilPage() {
       <Toaster position="top-center" />
       
       <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-8 border border-red-950/20 text-center">
-        <h1 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">¡Un último paso!</h1>
+        <h1 className="text-2xl font-black text-gray-900 mb-2 tracking-tight">¡Completa tu Perfil!</h1>
         <p className="text-sm font-medium text-gray-500 mb-6">
-          Para que los compradores o vendedores puedan contactarte, necesitamos tu número de WhatsApp.
+          Ingresa tus datos personales para que compradores y vendedores puedan identificarte y contactarte fácilmente.
         </p>
         
-        <form onSubmit={handleSaveWhatsApp} className="space-y-4 text-left">
+        <form onSubmit={handleSaveProfile} className="space-y-4 text-left">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Nombre *</label>
+            <input 
+              type="text" 
+              name="firstName" 
+              required 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
+              placeholder="Ej. Cristofer"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">
+              Apellido <span className="text-xs font-normal text-gray-400">(Opcional)</span>
+            </label>
+            <input 
+              type="text" 
+              name="lastName" 
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
+              placeholder="Ej. Quispe"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp *</label>
             <input 
               type="tel" 
               name="whatsapp" 
               required 
               className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 font-medium"
-              placeholder="Ej. 999111222"
+              placeholder="Ej. +51 999111222"
             />
           </div>
+
           <button 
             type="submit" 
             disabled={isLoading}
-            className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3.5 rounded-lg transition-colors shadow-md flex justify-center items-center gap-2"
+            className="w-full bg-red-700 hover:bg-red-800 text-white font-bold py-3.5 rounded-lg transition-colors shadow-md flex justify-center items-center gap-2 mt-6"
           >
-            {isLoading ? 'Guardando...' : 'Continuar a MecaStore'}
+            {isLoading ? 'Guardando...' : 'Finalizar y Entrar a MecaStore'}
           </button>
         </form>
       </div>
