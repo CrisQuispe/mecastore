@@ -21,6 +21,13 @@ export default function ProductDetailPage() {
   const [isSaved, setIsSaved] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  // FUNCIÓN PARA FORMATEAR EL NÚMERO DE WHATSAPP CON CÓDIGO DE PERÚ (+51)
+  const getFormattedPhone = (phoneRaw: string | undefined | null) => {
+    if (!phoneRaw) return '51999999999'
+    const digits = phoneRaw.replace(/\D/g, '')
+    return digits.length === 9 ? `51${digits}` : digits
+  }
+
   useEffect(() => {
     const fetchProductAndUser = async () => {
       // 1. Obtener usuario actual
@@ -43,7 +50,7 @@ export default function ProductDetailPage() {
         // 3. Verificar si el usuario actual ya guardó este producto
         if (currentUser) {
           const { data: savedData } = await supabase
-            .from('saved_products') // Asegúrate de que tu tabla se llame así
+            .from('saved_products')
             .select('*')
             .eq('product_id', params.id)
             .eq('user_id', currentUser.id)
@@ -140,7 +147,7 @@ export default function ProductDetailPage() {
             {/* BOTONES DE ACCIÓN (WhatsApp + Guardar) */}
             <div className="mt-auto space-y-3">
               <a 
-                href={`https://wa.me/${product.profiles?.whatsapp || '51999999999'}?text=Hola,%20me%20interesa%20el%20producto%20"${encodeURIComponent(product.title)}"%20que%20vi%20en%20MecaStore.`}
+                href={`https://wa.me/${getFormattedPhone(product.profiles?.whatsapp)}?text=Hola,%20me%20interesa%20el%20producto%20"${encodeURIComponent(product.title)}"%20que%20vi%20en%20MecaStore.`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-[#25D366] hover:bg-[#1EBE5C] text-white font-black py-4 rounded-xl shadow-lg shadow-[#25D366]/30 transition-all flex justify-center items-center gap-3 text-lg"
