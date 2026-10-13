@@ -6,7 +6,7 @@ import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-// --- NUEVO COMPONENTE: TARJETA DE PRODUCTO CON CARRUSEL TIPO ALIEXPRESS ---
+// --- COMPONENTE: TARJETA DE PRODUCTO CON CARRUSEL TIPO ALIEXPRESS Y CATEGORÍA DINÁMICA ---
 const ProductCard = ({ product, user }: { product: any, user: any }) => {
   const [currentImg, setCurrentImg] = useState(0)
   const images = product.product_images?.length > 0 
@@ -23,11 +23,16 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
     setCurrentImg((prev) => (prev - 1 + images.length) % images.length)
   }
 
+  // CÁLCULO DE CATEGORÍA MOSTRADA (Soporta "Otros - [Detalle]")
+  const displayCategory = product.custom_category
+    ? `Otros - ${product.custom_category}`
+    : product.categories?.name || 'General'
+
   return (
     <Link href={user ? `/producto/${product.id}` : '/auth/login'} className="group block h-full">
       <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
         
-        {/* IMAGEN MÁS ALTA (h-40 a h-52) PARA QUE NO SE VEA APLASTADA */}
+        {/* IMAGEN DEL PRODUCTO */}
         <div className="h-40 md:h-52 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100 group/image">
           <img src={images[currentImg]} alt={product.title} className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-500" />
           
@@ -62,7 +67,7 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
           </div>
           <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
             <Tag className="w-3 h-3" />
-            <span className="truncate">{product.categories?.name}</span>
+            <span className="truncate">{displayCategory}</span>
           </div>
         </div>
 
@@ -91,8 +96,12 @@ export default function HomePage() {
         .order('created_at', { ascending: false })
 
       if (data) {
+        // AGRUPAMIENTO SOPORTANDO "Otros - [Categoría Personalizada]"
         const grouped = data.reduce((acc, product) => {
-          const catName = product.categories?.name || 'Otros'
+          const catName = product.custom_category
+            ? `Otros - ${product.custom_category}`
+            : (product.categories?.name || 'Otros')
+          
           if (!acc[catName]) acc[catName] = []
           acc[catName].push(product)
           return acc
