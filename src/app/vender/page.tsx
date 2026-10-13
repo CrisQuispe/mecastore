@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Camera, Upload, DollarSign, Tag, Info } from 'lucide-react'
+import { Camera, Upload, DollarSign, Tag, Info, X } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface Category { 
@@ -17,6 +17,8 @@ export default function VenderPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
+  
+  // Archivos acumulados
   const [files, setFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
   
@@ -41,19 +43,34 @@ export default function VenderPage() {
     loadInitialData()
   }, [router, supabase])
 
+  // --- MANEJO DE IMÁGENES ACTUALIZADO ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files).slice(0, 6)
-      setFiles(selectedFiles)
-      setPreviewUrls(selectedFiles.map(file => URL.createObjectURL(file)))
+      const newFiles = Array.from(e.target.files)
+      
+      // Acumulamos las fotos nuevas con las que ya estaban, respetando el límite de 6
+      setFiles(prevFiles => {
+        const combinedFiles = [...prevFiles, ...newFiles].slice(0, 6)
+        setPreviewUrls(combinedFiles.map(file => URL.createObjectURL(file)))
+        return combinedFiles
+      })
     }
   }
+
+  const removeFile = (indexToRemove: number) => {
+    setFiles(prev => {
+      const newFiles = prev.filter((_, i) => i !== indexToRemove)
+      setPreviewUrls(newFiles.map(file => URL.createObjectURL(file)))
+      return newFiles
+    })
+  }
+  // ----------------------------------------
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  // Verificar si la categoría seleccionada es "Otros" (Soporta el emoji en el nombre)
+  // Verificar si la categoría seleccionada es "Otros"
   const selectedCategoryObj = categories.find(c => c.id === formData.categoryId)
   const isOtrosSelected = selectedCategoryObj?.name?.toLowerCase().includes('otros')
 
@@ -114,22 +131,56 @@ export default function VenderPage() {
         </div>
         
         <form onSubmit={handlePublish} className="space-y-6">
-          {/* SECCIÓN DE FOTOS */}
+          
+          {/* SECCIÓN DE FOTOS (Actualizada) */}
           <div>
             <label className="block text-sm font-bold text-gray-800 mb-2">Fotografías (Máx. 6) *</label>
-            <label className="flex flex-col items-center justify-center w-full h-36 border-2 border-red-200 border-dashed rounded-2xl cursor-pointer bg-red-50/30 hover:bg-red-50 transition-colors group">
-              <div className="bg-white p-3 rounded-full shadow-sm mb-3 group-hover:scale-110 transition-transform">
-                <Camera className="w-6 h-6 text-red-600" />
-              </div>
-              <p className="text-sm font-bold text-gray-700">Toca para subir fotos</p>
-              <p className="text-xs font-medium text-gray-400 mt-1">Formatos JPG, PNG, WEBP</p>
-              <input type="file" className="hidden" multiple accept="image/*" onChange={handleFileChange} />
-            </label>
+            
+            <div className="flex gap-3">
+              {/* Botón 1: Tomar Foto Directa */}
+              <label className="flex-1 flex flex-col items-center justify-center h-28 border-2 border-red-200 border-dashed rounded-2xl cursor-pointer bg-red-50/30 hover:bg-red-50 transition-colors group">
+                <div className="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
+                  <Camera className="w-5 h-5 text-red-600" />
+                </div>
+                <span className="text-sm font-bold text-gray-700">Tomar Foto</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  accept="image/*" 
+                  capture="environment" 
+                  onChange={handleFileChange} 
+                />
+              </label>
+
+              {/* Botón 2: Subir de Galería */}
+              <label className="flex-1 flex flex-col items-center justify-center h-28 border-2 border-red-200 border-dashed rounded-2xl cursor-pointer bg-red-50/30 hover:bg-red-50 transition-colors group">
+                <div className="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
+                  <Upload className="w-5 h-5 text-red-600" />
+                </div>
+                <span className="text-sm font-bold text-gray-700">De Galería</span>
+                <input 
+                  type="file" 
+                  className="hidden" 
+                  multiple 
+                  accept="image/*" 
+                  onChange={handleFileChange} 
+                />
+              </label>
+            </div>
+
+            {/* Previsualizaciones con Botón de Eliminar */}
             {previewUrls.length > 0 && (
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4">
                 {previewUrls.map((url, i) => (
-                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-red-100 shadow-sm">
-                    <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                  <div key={i} className="relative aspect-square rounded-xl overflow-hidden border-2 border-red-100 shadow-sm group">
+                    <img src={url} alt={`Preview ${i}`} className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => removeFile(i)}
+                      className="absolute top-1 right-1 bg-red-600/90 hover:bg-red-700 text-white rounded-full p-1 shadow-md transition-colors opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -145,7 +196,7 @@ export default function VenderPage() {
                 required 
                 value={formData.title}
                 onChange={handleChange} 
-                placeholder="Ej. Arduino Uno R3 Original + Cable"
+                placeholder="Nombre del componente o repuesto"
                 className="w-full px-4 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-medium text-gray-900 transition-all placeholder:text-gray-400" 
               />
             </div>
@@ -180,11 +231,11 @@ export default function VenderPage() {
                 onChange={handleChange} 
                 className="w-full px-4 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-bold text-gray-900 transition-all appearance-none cursor-pointer"
               >
-                <option value="Nuevo">✨ Nuevo</option>
-                <option value="Seminuevo">♻️ Seminuevo</option>
-                <option value="Para repuesto">🔧 Para repuesto</option>
-                <option value="Diseño propio">📐 Diseño propio</option>
-                <option value="Prototipo">🧪 Prototipo</option>
+                <option value="Nuevo"> Nuevo</option>
+                <option value="Seminuevo"> Seminuevo</option>
+                <option value="Para repuesto"> Para repuesto</option>
+                <option value="Diseño propio"> Diseño propio</option>
+                <option value="Prototipo"> Prototipo</option>
               </select>
             </div>
 
@@ -222,7 +273,7 @@ export default function VenderPage() {
                   required={isOtrosSelected} 
                   value={formData.customCategory}
                   onChange={handleChange} 
-                  placeholder="Ej. Neumática, PLC, Sensores especiales..."
+                  placeholder=""
                   className="w-full px-4 py-3 border border-red-300 rounded-xl outline-none focus:border-red-700 focus:ring-2 focus:ring-red-700/20 bg-white font-medium text-gray-900 transition-all" 
                 />
               </div>
