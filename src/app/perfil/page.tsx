@@ -99,15 +99,24 @@ export default function PerfilPage() {
 
       <main className="max-w-4xl mx-auto px-4 mt-8">
         
-        {/* Tarjeta de Información Personal */}
-        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex items-center gap-6 mb-8">
-          <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-700 flex-shrink-0">
-            <UserIcon className="w-10 h-10" />
+        {/* Tarjeta de Información Personal con el nuevo Botón Editar */}
+        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 mb-8">
+          <div className="flex items-center gap-6 w-full sm:w-auto">
+            <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center text-red-700 flex-shrink-0">
+              <UserIcon className="w-10 h-10" />
+            </div>
+            <div>
+              <h1 className="text-2xl font-black text-gray-900 tracking-tight">{profile?.first_name} {profile?.last_name}</h1>
+              <p className="text-sm text-gray-500 mt-1 font-mono font-medium">WhatsApp: {profile?.whatsapp}</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-2xl font-black text-gray-900 tracking-tight">{profile?.first_name} {profile?.last_name}</h1>
-            <p className="text-sm text-gray-500 mt-1 font-mono font-medium">WhatsApp: {profile?.whatsapp}</p>
-          </div>
+
+          <Link 
+            href="/perfil/editar" 
+            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-red-50 hover:bg-red-100 text-red-800 font-bold px-4 py-2.5 rounded-xl border border-red-200 transition-colors text-sm"
+          >
+            <Edit className="w-4 h-4" /> Editar Datos
+          </Link>
         </div>
 
         <h2 className="text-xl font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-tight">
@@ -145,7 +154,7 @@ export default function PerfilPage() {
                         </span>
                       )}
                       
-                      {/* BOTÓN EDITAR QUE ESTABAS BUSCANDO */}
+                      {/* BOTÓN EDITAR PRODUCTO */}
                       <Link href={`/editar/${product.id}`} className="bg-red-50 hover:bg-red-100 text-red-800 px-3 py-1.5 rounded text-xs font-bold flex items-center gap-1 transition-colors">
                         <Edit className="w-4 h-4" /> Editar
                       </Link>
