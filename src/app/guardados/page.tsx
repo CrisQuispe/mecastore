@@ -19,35 +19,45 @@ export default function GuardadosPage() {
     setIsLoading(true)
     const { data: { user } } = await supabase.auth.getUser()
     
-    if (user) {
-      // Buscamos los guardados del usuario y cruzamos los datos con la tabla de productos
-      const { data } = await supabase
-        .from('saved_products')
-        .select(`
-          id,
-          product_id,
-          products (
-            id,
-            title,
-            price,
-            condition,
-            categories(name),
-            product_images(image_url, is_primary)
-          )
-        `)
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-
-      if (data) {
-        // Filtramos por si algún producto fue borrado por el vendedor pero seguía guardado
-        setSavedItems(data.filter(item => item.products != null))
-      }
+    if (!user) {
+      setIsLoading(false)
+      return
     }
+
+    // Consulta optimizada para evitar fallos de relaciones anidadas
+    const { data, error } = await supabase
+      .from('saved_products')
+      .select(`
+        id,
+        product_id,
+        products:product_id (
+          id,
+          title,
+          price,
+          condition,
+          categories(name),
+          product_images(image_url, is_primary)
+        )
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Error al cargar guardados:', error.message)
+      toast.error('Error al cargar tus productos guardados')
+    }
+
+    if (data) {
+      // Filtramos por si algún producto fue borrado o no existe relación
+      const validItems = data.filter(item => item.products != null)
+      setSavedItems(validItems)
+    }
+
     setIsLoading(false)
   }
 
   const removeSavedItem = async (savedId: number, e: React.MouseEvent) => {
-    e.preventDefault() // Evita que al hacer clic en borrar nos lleve a la página del producto
+    e.preventDefault() 
     
     const { error } = await supabase.from('saved_products').delete().eq('id', savedId)
     
@@ -93,8 +103,8 @@ export default function GuardadosPage() {
             {savedItems.map((saved) => {
               const product = saved.products
               const primaryImage = product.product_images?.find((img: any) => img.is_primary)?.image_url 
-                                || product.product_images?.[0]?.image_url 
-                                || '/placeholder.png'
+                                    || product.product_images?.[0]?.image_url 
+                                    || '/placeholder.png'
 
               return (
                 <Link href={`/producto/${product.id}`} key={saved.id} className="group block h-full">
