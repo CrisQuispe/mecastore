@@ -38,16 +38,30 @@ export default function VenderPage() {
   })
 
   // Cerrar el dropdown si se hace clic afuera
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsCategoryOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+useEffect(() => {
+    const loadInitialData = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return router.push('/auth/login')
+      setUserId(user.id)
+      
+      // Verificar si el usuario ya tiene perfil y número de WhatsApp
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('whatsapp')
+        .eq('id', user.id)
+        .single()
 
+      if (!profile || !profile.whatsapp) {
+        toast.error('Debes completar tu perfil y WhatsApp antes de publicar')
+        return router.push('/completar-perfil')
+      }
+
+      const { data: cats } = await supabase.from('categories').select('*').order('name')
+      if (cats) setCategories(cats)
+    }
+    loadInitialData()
+  }, [router, supabase])
+  
   useEffect(() => {
     const loadInitialData = async () => {
       const { data: { user } } = await supabase.auth.getUser()

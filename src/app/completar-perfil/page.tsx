@@ -116,7 +116,9 @@ export default function CompletarPerfilPage() {
                 placeholder=""
               />
             </div>
-            <p className="text-[11px] text-gray-400 mt-1 font-medium">Ingresa tus 9 dígitos. El código de Perú (+51) se agrega automáticamente[cite: 21].</p>
+            <p className="text-[11px] text-gray-400 mt-1 font-medium">
+              Ingresa tus 9 dígitos. El código de Perú (+51) se agrega automáticamente.
+            </p>
           </div>
 
           <button 
