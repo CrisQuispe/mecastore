@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Bookmark, Share2, Copy } from 'lucide-react'
+import { ArrowLeft, Bookmark, Share2, AlertTriangle } from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface ProductDetailClientProps {
@@ -78,6 +78,30 @@ export default function ProductDetailClient({
       // Fallback: copiar al portapapeles
       await navigator.clipboard.writeText(window.location.href)
       toast.success('¡Enlace copiado al portapapeles!')
+    }
+  }
+
+  // FUNCIÓN PARA REPORTAR PRODUCTO
+  const handleReport = async () => {
+    if (!currentUser) {
+      toast.error('Debes iniciar sesión para reportar publicaciones')
+      router.push('/auth/login')
+      return
+    }
+
+    const reason = window.prompt('¿Cuál es el motivo del reporte (ej. producto prohibido, estafa, precio falso, duplicado)?')
+    if (!reason || !reason.trim()) return
+
+    const { error } = await supabase.from('reports').insert({
+      product_id: product.id,
+      user_id: currentUser.id,
+      reason: reason.trim()
+    })
+
+    if (error) {
+      toast.error('Error al enviar el reporte. Inténtalo de nuevo.')
+    } else {
+      toast.success('Reporte enviado correctamente. El equipo lo revisará.')
     }
   }
 
@@ -186,6 +210,17 @@ export default function ProductDetailClient({
                 >
                   <Share2 className="w-4 h-4" />
                   Compartir
+                </button>
+              </div>
+
+              {/* Botón de Reporte Discreto */}
+              <div className="pt-2 text-center">
+                <button
+                  onClick={handleReport}
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-red-700 transition-colors"
+                >
+                  <AlertTriangle className="w-3.5 h-3.5" />
+                  Reportar publicación sospechosa o duplicada
                 </button>
               </div>
             </div>
