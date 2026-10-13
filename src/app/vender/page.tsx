@@ -1,9 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Camera, Upload, DollarSign, Tag, Info, X } from 'lucide-react'
+import { 
+  Camera, Upload, Info, ChevronDown, 
+  Cpu, CircuitBoard, Settings, Printer, Wrench, 
+  Plug, BatteryCharging, GraduationCap, Code, 
+  Package, Tag, MoreHorizontal, X, ArrowLeft 
+} from 'lucide-react'
 import toast, { Toaster } from 'react-hot-toast'
 
 interface Category { 
@@ -14,13 +19,14 @@ interface Category {
 export default function VenderPage() {
   const router = useRouter()
   const supabase = createClient()
+  const dropdownRef = useRef<HTMLDivElement>(null)
+  
   const [categories, setCategories] = useState<Category[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
-  
-  // Archivos acumulados
   const [files, setFiles] = useState<File[]>([])
   const [previewUrls, setPreviewUrls] = useState<string[]>([])
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false)
   
   const [formData, setFormData] = useState({
     title: '',
@@ -30,6 +36,17 @@ export default function VenderPage() {
     categoryId: '',
     customCategory: ''
   })
+
+  // Cerrar el dropdown si se hace clic afuera
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsCategoryOpen(false)
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside)
+    return () => document.removeEventListener("mousedown", handleClickOutside)
+  }, [])
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -43,12 +60,11 @@ export default function VenderPage() {
     loadInitialData()
   }, [router, supabase])
 
-  // --- MANEJO DE IMÁGENES ACTUALIZADO ---
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       
-      // Acumulamos las fotos nuevas con las que ya estaban, respetando el límite de 6
+      // Acumulamos las nuevas fotos con las que ya estaban, máximo 6
       setFiles(prevFiles => {
         const combinedFiles = [...prevFiles, ...newFiles].slice(0, 6)
         setPreviewUrls(combinedFiles.map(file => URL.createObjectURL(file)))
@@ -64,19 +80,52 @@ export default function VenderPage() {
       return newFiles
     })
   }
-  // ----------------------------------------
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value })
   }
 
-  // Verificar si la categoría seleccionada es "Otros"
+  // --- FORMATEADOR DE PRECIO CON COMAS (1,000.00) ---
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // 1. Quitar todo lo que no sea número o punto
+    let rawValue = e.target.value.replace(/[^0-9.]/g, '')
+    
+    // 2. Evitar múltiples puntos decimales
+    const parts = rawValue.split('.')
+    if (parts.length > 2) rawValue = parts[0] + '.' + parts.slice(1).join('')
+    
+    // 3. Agregar comas a la parte entera
+    if (parts[0]) {
+      parts[0] = parseInt(parts[0], 10).toLocaleString('en-US')
+    }
+    
+    setFormData({ ...formData, price: parts.join('.') })
+  }
+
+  // Mapear Nombres de Categoría a Iconos de Lucide
+  const getCategoryIcon = (name: string, className = "w-5 h-5 text-gray-500") => {
+    const lower = name.toLowerCase()
+    if (lower.includes('electrónic')) return <Cpu className={className} />
+    if (lower.includes('microcontrolador') || lower.includes('arduino')) return <CircuitBoard className={className} />
+    if (lower.includes('motor') || lower.includes('actuador')) return <Settings className={className} />
+    if (lower.includes('impresión 3d')) return <Printer className={className} />
+    if (lower.includes('herramienta')) return <Wrench className={className} />
+    if (lower.includes('cable')) return <Plug className={className} />
+    if (lower.includes('fuente')) return <BatteryCharging className={className} />
+    if (lower.includes('proyecto')) return <GraduationCap className={className} />
+    if (lower.includes('software')) return <Code className={className} />
+    if (lower.includes('material')) return <Package className={className} />
+    if (lower.includes('otro')) return <MoreHorizontal className={className} />
+    return <Tag className={className} />
+  }
+
   const selectedCategoryObj = categories.find(c => c.id === formData.categoryId)
   const isOtrosSelected = selectedCategoryObj?.name?.toLowerCase().includes('otros')
 
   const handlePublish = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!userId || files.length === 0) return toast.error('Debes subir al menos una fotografía')
+    if (!formData.categoryId) return toast.error('Debes seleccionar una categoría')
     
     if (isOtrosSelected && !formData.customCategory.trim()) {
       return toast.error('Por favor especifica el nombre de la categoría personalizada')
@@ -85,13 +134,16 @@ export default function VenderPage() {
     setIsLoading(true)
 
     try {
+      // Limpiar las comas antes de guardar a la base de datos
+      const numericPrice = parseFloat(formData.price.replace(/,/g, ''))
+
       const { data: product, error: productError } = await supabase
         .from('products')
         .insert({
           seller_id: userId,
           title: formData.title,
           description: formData.description,
-          price: parseFloat(formData.price),
+          price: numericPrice,
           condition: formData.condition,
           category_id: formData.categoryId,
           custom_category: isOtrosSelected ? formData.customCategory.trim() : null
@@ -99,7 +151,7 @@ export default function VenderPage() {
 
       if (productError) throw productError
 
-      // Subida de imágenes a Supabase Storage
+      // Subida de imágenes
       for (let i = 0; i < files.length; i++) {
         const file = files[i]
         const fileName = `${product.id}/${Math.random()}.${file.name.split('.').pop()}`
@@ -118,9 +170,20 @@ export default function VenderPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#fdf4f4] via-white to-red-50/50 py-10 px-4 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-[#fdf4f4] via-white to-red-50/50 py-10 px-4 font-sans flex flex-col">
       <Toaster position="top-center" />
-      <div className="max-w-2xl mx-auto bg-white rounded-3xl shadow-[0_8px_30px_rgb(185,28,28,0.06)] p-6 sm:p-10 border border-red-100 relative overflow-hidden">
+      
+      {/* BOTÓN VOLVER */}
+      <div className="max-w-2xl mx-auto w-full mb-4">
+        <button 
+          onClick={() => router.back()}
+          className="flex items-center gap-2 text-gray-600 hover:text-red-700 font-bold bg-white px-4 py-2 rounded-xl shadow-sm border border-red-50 transition-colors w-fit"
+        >
+          <ArrowLeft className="w-5 h-5" /> Volver al catálogo
+        </button>
+      </div>
+
+      <div className="max-w-2xl mx-auto w-full bg-white rounded-3xl shadow-[0_8px_30px_rgb(185,28,28,0.06)] p-6 sm:p-10 border border-red-100 relative overflow-hidden">
         
         {/* Decoración superior roja */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-red-600 via-red-700 to-red-900"></div>
@@ -131,44 +194,28 @@ export default function VenderPage() {
         </div>
         
         <form onSubmit={handlePublish} className="space-y-6">
-          
-          {/* SECCIÓN DE FOTOS (Actualizada) */}
+          {/* FOTOS */}
           <div>
             <label className="block text-sm font-bold text-gray-800 mb-2">Fotografías (Máx. 6) *</label>
             
             <div className="flex gap-3">
-              {/* Botón 1: Tomar Foto Directa */}
               <label className="flex-1 flex flex-col items-center justify-center h-28 border-2 border-red-200 border-dashed rounded-2xl cursor-pointer bg-red-50/30 hover:bg-red-50 transition-colors group">
                 <div className="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
                   <Camera className="w-5 h-5 text-red-600" />
                 </div>
                 <span className="text-sm font-bold text-gray-700">Tomar Foto</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  accept="image/*" 
-                  capture="environment" 
-                  onChange={handleFileChange} 
-                />
+                <input type="file" className="hidden" accept="image/*" capture="environment" onChange={handleFileChange} />
               </label>
 
-              {/* Botón 2: Subir de Galería */}
               <label className="flex-1 flex flex-col items-center justify-center h-28 border-2 border-red-200 border-dashed rounded-2xl cursor-pointer bg-red-50/30 hover:bg-red-50 transition-colors group">
                 <div className="bg-white p-2 rounded-full shadow-sm mb-2 group-hover:scale-110 transition-transform">
                   <Upload className="w-5 h-5 text-red-600" />
                 </div>
                 <span className="text-sm font-bold text-gray-700">De Galería</span>
-                <input 
-                  type="file" 
-                  className="hidden" 
-                  multiple 
-                  accept="image/*" 
-                  onChange={handleFileChange} 
-                />
+                <input type="file" className="hidden" multiple accept="image/*" onChange={handleFileChange} />
               </label>
             </div>
 
-            {/* Previsualizaciones con Botón de Eliminar */}
             {previewUrls.length > 0 && (
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-3 mt-4">
                 {previewUrls.map((url, i) => (
@@ -188,7 +235,7 @@ export default function VenderPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {/* NOMBRE DEL PRODUCTO */}
+            {/* NOMBRE */}
             <div className="md:col-span-2">
               <label className="block text-sm font-bold text-gray-800 mb-1.5">Nombre del producto *</label>
               <input 
@@ -201,67 +248,88 @@ export default function VenderPage() {
               />
             </div>
 
-            {/* PRECIO */}
+            {/* PRECIO CON FORMATO (1,000.00) Y SOLES */}
             <div>
               <label className="block text-sm font-bold text-gray-800 mb-1.5">Precio (S/) *</label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <DollarSign className="h-5 w-5 text-red-500" />
+                  <span className="text-red-500 font-black text-lg">S/</span>
                 </div>
                 <input 
                   name="price" 
-                  type="number" 
-                  step="0.10" 
+                  type="text" 
                   required 
                   value={formData.price}
-                  onChange={handleChange} 
+                  onChange={handlePriceChange} 
                   placeholder="0.00"
                   className="w-full pl-11 pr-4 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-medium text-gray-900 transition-all placeholder:text-gray-400" 
                 />
               </div>
             </div>
 
-            {/* CONDICIÓN */}
+            {/* CONDICIÓN CON FLECHA */}
             <div>
               <label className="block text-sm font-bold text-gray-800 mb-1.5">Condición *</label>
-              <select 
-                name="condition" 
-                required 
-                value={formData.condition}
-                onChange={handleChange} 
-                className="w-full px-4 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-bold text-gray-900 transition-all appearance-none cursor-pointer"
-              >
-                <option value="Nuevo"> Nuevo</option>
-                <option value="Seminuevo"> Seminuevo</option>
-                <option value="Para repuesto"> Para repuesto</option>
-                <option value="Diseño propio"> Diseño propio</option>
-                <option value="Prototipo"> Prototipo</option>
-              </select>
-            </div>
-
-            {/* CATEGORÍA PRINCIPAL */}
-            <div className="md:col-span-2">
-              <label className="block text-sm font-bold text-gray-800 mb-1.5">Categoría *</label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <Tag className="h-5 w-5 text-red-500" />
-                </div>
                 <select 
-                  name="categoryId" 
+                  name="condition" 
                   required 
-                  value={formData.categoryId}
+                  value={formData.condition}
                   onChange={handleChange} 
-                  className="w-full pl-11 pr-4 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-medium text-gray-900 transition-all appearance-none cursor-pointer"
+                  className="w-full pl-4 pr-10 py-3.5 border border-red-200 rounded-xl outline-none focus:border-red-600 focus:ring-2 focus:ring-red-600/20 bg-red-50/30 font-bold text-gray-900 transition-all appearance-none cursor-pointer"
                 >
-                  <option value="" className="text-gray-400">Selecciona una categoría...</option>
-                  {categories.map(c => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
+                  <option value="Nuevo"> Nuevo</option>
+                  <option value="Seminuevo"> Seminuevo</option>
+                  <option value="Para repuesto"> Para repuesto</option>
+                  <option value="Diseño propio"> Diseño propio</option>
+                  <option value="Prototipo"> Prototipo</option>
                 </select>
+                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* CAMPO ADICIONAL SI SELECCIONA "OTROS" */}
+            {/* CATEGORÍA (Custom Dropdown) */}
+            <div className="md:col-span-2 relative" ref={dropdownRef}>
+              <label className="block text-sm font-bold text-gray-800 mb-1.5">Categoría *</label>
+              <div 
+                onClick={() => setIsCategoryOpen(!isCategoryOpen)}
+                className={`w-full px-4 py-3.5 border rounded-xl flex items-center justify-between cursor-pointer transition-all bg-red-50/30 ${isCategoryOpen ? 'border-red-600 ring-2 ring-red-600/20' : 'border-red-200 hover:border-red-400'}`}
+              >
+                {formData.categoryId ? (
+                  <div className="flex items-center gap-3">
+                    {getCategoryIcon(selectedCategoryObj?.name || '')}
+                    <span className="font-medium text-gray-900">{selectedCategoryObj?.name}</span>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 text-gray-400">
+                    <Tag className="w-5 h-5 text-gray-400" />
+                    <span className="font-medium">Selecciona una categoría...</span>
+                  </div>
+                )}
+                <ChevronDown className={`w-5 h-5 text-gray-400 transition-transform ${isCategoryOpen ? 'rotate-180' : ''}`} />
+              </div>
+
+              {/* Lista desplegable */}
+              {isCategoryOpen && (
+                <div className="absolute z-20 w-full mt-2 bg-white border border-red-100 rounded-xl shadow-xl max-h-64 overflow-y-auto py-2 hide-scrollbar">
+                  {categories.map(c => (
+                    <div 
+                      key={c.id} 
+                      onClick={() => {
+                        setFormData({ ...formData, categoryId: c.id })
+                        setIsCategoryOpen(false)
+                      }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-red-50 cursor-pointer transition-colors"
+                    >
+                      {getCategoryIcon(c.name)}
+                      <span className="font-medium text-gray-700">{c.name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* CAMPO "OTROS" */}
             {isOtrosSelected && (
               <div className="md:col-span-2 bg-gradient-to-br from-red-50 to-red-100/50 p-5 rounded-2xl border border-red-200 shadow-inner">
                 <label className="flex items-center gap-2 text-sm font-bold text-red-900 mb-2">
@@ -273,7 +341,7 @@ export default function VenderPage() {
                   required={isOtrosSelected} 
                   value={formData.customCategory}
                   onChange={handleChange} 
-                  placeholder=""
+                  placeholder="Ej. Neumática, PLC, Sensores especiales..."
                   className="w-full px-4 py-3 border border-red-300 rounded-xl outline-none focus:border-red-700 focus:ring-2 focus:ring-red-700/20 bg-white font-medium text-gray-900 transition-all" 
                 />
               </div>
