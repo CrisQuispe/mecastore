@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
-import { ShieldAlert, Trash2, CheckCircle, ArrowLeft } from 'lucide-react'
+import { ShieldAlert, Trash2, CheckCircle, ArrowLeft, Package } from 'lucide-react'
 import Link from 'next/link'
 import toast, { Toaster } from 'react-hot-toast'
 
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
           id, reason, status, created_at,
           product_id,
           products (title, price, seller_id),
-          profiles!reports_reporter_id_fkey (first_name, last_name)
+          profiles:user_id (first_name, last_name)
         `)
         .eq('status', 'pending')
         .order('created_at', { ascending: false })
@@ -59,7 +59,7 @@ export default function AdminDashboard() {
   const handleDeleteProduct = async (productId: string, reportId: string) => {
     if (!window.confirm('¿Estás seguro de ELIMINAR esta publicación permanentemente?')) return
 
-    // 1. Eliminar el producto (las políticas de Admin lo permiten)
+    // 1. Eliminar el producto
     const { error: deleteError } = await supabase.from('products').delete().eq('id', productId)
     
     if (deleteError) {
@@ -88,53 +88,58 @@ export default function AdminDashboard() {
     }
   }
 
-  if (isLoading) return <div className="min-h-screen flex items-center justify-center">Verificando credenciales...</div>
-  if (!isAdmin) return null // Evita destellos si es expulsado por no ser admin
+  if (isLoading) return <div className="min-h-screen bg-[#fdf4f4] flex items-center justify-center font-bold text-gray-500">Verificando credenciales...</div>
+  if (!isAdmin) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-12">
+    <div className="min-h-screen bg-[#fdf4f4] font-sans text-gray-900 pb-12">
       <Toaster position="top-center" />
-      <nav className="bg-slate-900 px-4 py-4 text-white">
+      <nav className="bg-white border-b border-gray-200 px-4 py-4">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <ShieldAlert className="w-6 h-6 text-red-400" />
-            <span className="font-bold text-lg">Panel de Administración</span>
+            <ShieldAlert className="w-6 h-6 text-red-700" />
+            <span className="font-black text-lg text-gray-900 tracking-tight uppercase">Panel de Administración</span>
           </div>
-          <Link href="/" className="text-slate-300 hover:text-white flex items-center gap-2 text-sm">
+          <Link href="/" className="text-gray-600 hover:text-red-800 flex items-center gap-2 text-sm font-bold transition-colors bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
             <ArrowLeft className="w-4 h-4" /> Volver al Marketplace
           </Link>
         </div>
       </nav>
 
       <main className="max-w-5xl mx-auto px-4 mt-8">
-        <h2 className="text-2xl font-bold text-gray-900 mb-6">Reportes Pendientes de Revisión ({reports.length})</h2>
+        <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-2 uppercase tracking-tight">
+          <Package className="w-6 h-6 text-red-700" /> Reportes Pendientes de Revisión ({reports.length})
+        </h2>
 
         {reports.length === 0 ? (
-          <div className="bg-white p-8 rounded-xl border border-gray-200 text-center text-gray-500">
-            No hay reportes pendientes. La comunidad está segura.
+          <div className="bg-white p-10 rounded-2xl border border-gray-200 text-center text-gray-500 shadow-sm">
+            <p className="font-bold text-gray-700">No hay reportes pendientes.</p>
+            <p className="text-xs text-gray-400 mt-1">La comunidad se encuentra segura y sin incidencias.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {reports.map((report) => (
-              <div key={report.id} className="bg-white p-6 rounded-xl border border-red-100 shadow-sm flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
+              <div key={report.id} className="bg-white p-6 rounded-2xl border border-red-100 shadow-sm flex flex-col md:flex-row gap-6 justify-between items-start md:items-center">
                 
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <span className="bg-red-100 text-red-800 text-xs font-bold px-2 py-1 rounded">MOTIVO: {report.reason.toUpperCase()}</span>
-                    <span className="text-xs text-gray-400">{new Date(report.created_at).toLocaleDateString()}</span>
+                    <span className="bg-red-100 text-red-800 text-[10px] font-black px-2.5 py-1 rounded-md uppercase tracking-wider">
+                      MOTIVO: {report.reason}
+                    </span>
+                    <span className="text-xs font-semibold text-gray-400">{new Date(report.created_at).toLocaleDateString()}</span>
                   </div>
                   
                   {report.products ? (
                     <>
-                      <Link href={`/producto/${report.product_id}`} target="_blank" className="text-lg font-bold text-blue-600 hover:underline">
-                        {report.products.title} (S/ {report.products.price})
+                      <Link href={`/producto/${report.product_id}`} target="_blank" className="text-lg font-black text-gray-900 hover:text-red-700 transition-colors block">
+                        {report.products.title} <span className="text-red-700 font-bold">(S/ {report.products.price.toFixed(2)})</span>
                       </Link>
-                      <p className="text-sm text-gray-600">
-                        Reportado por: <strong>{report.profiles?.first_name} {report.profiles?.last_name}</strong>
+                      <p className="text-xs font-medium text-gray-500">
+                        Reportado por: <strong className="text-gray-800">{report.profiles?.first_name} {report.profiles?.last_name || ''}</strong>
                       </p>
                     </>
                   ) : (
-                    <p className="text-sm text-gray-500 italic">El producto ya no existe (fue eliminado por el vendedor).</p>
+                    <p className="text-xs text-gray-400 italic">El producto ya no existe (fue eliminado por el vendedor).</p>
                   )}
                 </div>
 
@@ -142,16 +147,16 @@ export default function AdminDashboard() {
                   {report.products && (
                     <button 
                       onClick={() => handleDeleteProduct(report.product_id, report.id)}
-                      className="flex-1 md:flex-none bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                      className="flex-1 md:flex-none bg-red-700 hover:bg-red-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-sm"
                     >
                       <Trash2 className="w-4 h-4" /> Eliminar Publicación
                     </button>
                   )}
                   <button 
                     onClick={() => handleDismissReport(report.id)}
-                    className="flex-1 md:flex-none bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg text-sm font-semibold flex items-center justify-center gap-2 transition-colors"
+                    className="flex-1 md:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-colors"
                   >
-                    <CheckCircle className="w-4 h-4" /> Descartar Reporte
+                    <CheckCircle className="w-4 h-4" /> Descartar
                   </button>
                 </div>
               </div>
