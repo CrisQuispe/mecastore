@@ -80,38 +80,101 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
 export default function HomePage() {
   const supabase = createClient()
   const router = useRouter()
+  
+  // ESTADOS PRINCIPALES
+  const [allProducts, setAllProducts] = useState<any[]>([]) // Guardar todos los productos crudos
   const [groupedProducts, setGroupedProducts] = useState<Record<string, any[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
+  
+  // ESTADOS DE FILTRO Y BÚSQUEDA
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
+  const [availableCategories, setAvailableCategories] = useState<string[]>([])
 
   useEffect(() => {
-    const fetchInitialData = async () => {
-      const { data: { user: currentUser } } = await supabase.auth.getUser()
-      setUser(currentUser)
+      // 1. Extraemos la función para poder llamarla cuando queramos
+      const fetchInitialData = async () => {
+        const { data: { user: currentUser } } = await supabase.auth.getUser()
+        setUser(currentUser)
 
-      const { data } = await supabase
-        .from('products')
-        .select(`*, categories(name), product_images(image_url, is_primary)`)
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
+        const { data } = await supabase
+          .from('products')
+          .select(`*, categories(name), product_images(image_url, is_primary)`)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false })
 
-      if (data) {
-        // AGRUPAMIENTO SOPORTANDO "Otros - [Categoría Personalizada]"
-        const grouped = data.reduce((acc, product) => {
-          const catName = product.custom_category
-            ? `Otros - ${product.custom_category}`
-            : (product.categories?.name || 'Otros')
+        if (data) {
+          setAllProducts(data)
           
-          if (!acc[catName]) acc[catName] = []
-          acc[catName].push(product)
-          return acc
-        }, {} as Record<string, any[]>)
-        setGroupedProducts(grouped)
+          // Obtener categorías únicas reales para la cinta de opciones
+          const uniqueCategories = Array.from(new Set(data.map(p => 
+            p.custom_category ? `Otros - ${p.custom_category}` : (p.categories?.name || 'Otros')
+          )))
+          setAvailableCategories(uniqueCategories)
+        }
+        setIsLoading(false)
       }
-      setIsLoading(false)
+
+      // 2. Cargamos los datos por primera vez al entrar a la página
+      fetchInitialData()
+
+      // 3. ¡LA MAGIA EN TIEMPO REAL! 
+      // Nos suscribimos a cualquier cambio (INSERT, UPDATE, DELETE) en la tabla 'products'
+      const channel = supabase
+        .channel('realtime-products')
+        .on(
+          'postgres_changes', 
+          { event: '*', schema: 'public', table: 'products' }, 
+          (payload) => {
+            console.log('¡Cambio detectado en la base de datos!', payload)
+            // Cuando algo cambie (ej: borraste un producto), volvemos a traer los datos en silencio
+            fetchInitialData()
+          }
+        )
+        .subscribe()
+
+      // 4. Limpiamos la suscripción si el usuario sale de la página
+      return () => {
+        supabase.removeChannel(channel)
+      }
+    }, [supabase])
+
+  // EFECTO PARA FILTRAR EN TIEMPO REAL
+  useEffect(() => {
+    let filtered = allProducts
+
+    // 1. Filtrar por término de búsqueda (título)
+    if (searchTerm.trim() !== '') {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(product => 
+        product.title.toLowerCase().includes(term)
+      )
     }
-    fetchInitialData()
-  }, [supabase])
+
+    // 2. Filtrar por categoría seleccionada
+    if (selectedCategory) {
+      filtered = filtered.filter(product => {
+        const catName = product.custom_category
+          ? `Otros - ${product.custom_category}`
+          : (product.categories?.name || 'Otros')
+        return catName === selectedCategory
+      })
+    }
+
+    // 3. Volver a agrupar los resultados filtrados
+    const grouped = filtered.reduce((acc, product) => {
+      const catName = product.custom_category
+        ? `Otros - ${product.custom_category}`
+        : (product.categories?.name || 'Otros')
+      
+      if (!acc[catName]) acc[catName] = []
+      acc[catName].push(product)
+      return acc
+    }, {} as Record<string, any[]>)
+
+    setGroupedProducts(grouped)
+  }, [searchTerm, selectedCategory, allProducts])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
@@ -119,11 +182,20 @@ export default function HomePage() {
     router.refresh()
   }
 
+  // Icono dinámico según el nombre de la categoría (puedes agregar más según tus categorías)
+  const getCategoryIcon = (catName: string) => {
+    const name = catName.toLowerCase()
+    if (name.includes('electr')) return <Cpu className="w-3 h-3"/>
+    if (name.includes('herramienta')) return <Wrench className="w-3 h-3"/>
+    if (name.includes('software')) return <Code className="w-3 h-3"/>
+    return <Tag className="w-3 h-3"/>
+  }
+
   return (
     <div className="min-h-screen bg-[#fdf4f4] dark:bg-[#fdf4f4] font-sans text-gray-900 dark:text-gray-900">
       
       {/* 1. NAVBAR */}
-      <nav className="bg-white dark:bg-white shadow-sm">
+      <nav className="bg-white dark:bg-white shadow-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div className="flex items-center justify-between w-full sm:w-auto">
             <Link href="/" className="flex items-center gap-2">
@@ -146,6 +218,8 @@ export default function HomePage() {
             <input 
               type="text" 
               placeholder="Buscar componentes..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all text-sm font-medium bg-white dark:bg-white text-gray-900 dark:text-gray-900"
             />
             <Search className="absolute left-3 top-2.5 text-gray-400 w-4 h-4" />
@@ -169,13 +243,25 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. CINTA DE OPCIONES */}
+      {/* 2. CINTA DE OPCIONES (CATEGORÍAS DINÁMICAS) */}
       <div className="bg-white/80 dark:bg-white/80 border-b border-gray-200 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-8 text-xs font-bold text-gray-600 dark:text-gray-600 overflow-x-auto">
-          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Grid className="w-3 h-3"/> Todo el catálogo</span>
-          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Cpu className="w-3 h-3"/> Electrónica</span>
-          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Wrench className="w-3 h-3"/> Herramientas</span>
-          <span className="flex items-center gap-1 hover:text-red-700 cursor-pointer transition-colors"><Code className="w-3 h-3"/> Software</span>
+          <span 
+            onClick={() => setSelectedCategory(null)}
+            className={`flex items-center gap-1 cursor-pointer transition-colors ${selectedCategory === null ? 'text-red-700 border-b-2 border-red-700 pb-1' : 'hover:text-red-700'}`}
+          >
+            <Grid className="w-3 h-3"/> Todo el catálogo
+          </span>
+          
+          {availableCategories.map(cat => (
+            <span 
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`flex items-center gap-1 cursor-pointer transition-colors whitespace-nowrap ${selectedCategory === cat ? 'text-red-700 border-b-2 border-red-700 pb-1' : 'hover:text-red-700'}`}
+            >
+              {getCategoryIcon(cat)} {cat}
+            </span>
+          ))}
         </div>
       </div>
 
@@ -191,7 +277,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4. CONTENIDO AGRUPADO */}
+      {/* 4. CONTENIDO AGRUPADO Y FILTRADO */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
@@ -200,7 +286,15 @@ export default function HomePage() {
         ) : Object.keys(groupedProducts).length === 0 ? (
           <div className="text-center bg-white dark:bg-white p-10 border border-gray-200 rounded-lg shadow-sm">
             <ShoppingBag className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-            <h3 className="text-base font-bold text-gray-900 dark:text-gray-900">Catálogo vacío</h3>
+            <h3 className="text-base font-bold text-gray-900 dark:text-gray-900">No se encontraron productos</h3>
+            {(searchTerm || selectedCategory) && (
+              <button 
+                onClick={() => { setSearchTerm(''); setSelectedCategory(null); }}
+                className="mt-4 text-sm text-red-600 hover:text-red-800 font-bold"
+              >
+                Limpiar filtros
+              </button>
+            )}
           </div>
         ) : (
           Object.entries(groupedProducts).map(([categoryName, items]) => (
