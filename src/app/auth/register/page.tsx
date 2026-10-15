@@ -10,17 +10,36 @@ import { Eye, EyeOff } from 'lucide-react'
 export default function RegisterPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [whatsappInput, setWhatsappInput] = useState('')
   const router = useRouter()
   const supabase = createClient()
 
+  // Controlar que solo se ingresen números en el campo de WhatsApp
+  const handleWhatsappChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const onlyNums = e.target.value.replace(/[^0-9]/g, '')
+    setWhatsappInput(onlyNums)
+  }
+
   const handleRegister = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
-    
+
     const formData = new FormData(e.currentTarget)
     const email = formData.get('email') as string
     const password = formData.get('password') as string
-    const whatsapp = formData.get('whatsapp') as string
+
+    // --- VALIDACIÓN ESTRICTA DE WHATSAPP PARA PERÚ ---
+    const whatsappRegex = /^9\d{8}$/;
+    
+    if (!whatsappRegex.test(whatsappInput)) {
+      toast.error('El celular debe tener 9 dígitos y empezar con 9 (Ej: 987654321)')
+      return // Detiene el registro si el número es inválido
+    }
+    // -------------------------------------------------
+
+    setIsLoading(true)
+    
+    // Le agregamos el código de Perú internamente antes de guardar
+    const finalPhone = `51${whatsappInput}`
 
     // Registra al usuario y guarda su número de WhatsApp en la base de datos
     const { error } = await supabase.auth.signUp({
@@ -28,7 +47,7 @@ export default function RegisterPage() {
       password,
       options: {
         data: {
-          whatsapp: whatsapp // Guarda el número personalizado
+          whatsapp: finalPhone // Guarda el número ya validado con el 51
         },
         emailRedirectTo: `${location.origin}/auth/callback`,
       },
@@ -60,17 +79,25 @@ export default function RegisterPage() {
         
         <form onSubmit={handleRegister} className="space-y-4">
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp</label>
-            <input 
-              type="tel" 
-              name="whatsapp" 
-              required 
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg outline-none focus:border-red-700 focus:ring-1 focus:ring-red-700 transition-all bg-white text-gray-900 dark:bg-white dark:text-gray-900 font-medium"
-              placeholder="Ej. 999111222"
-            />
+            <label className="block text-sm font-bold text-gray-700 mb-1">Número de WhatsApp *</label>
+            <div className="flex rounded-lg overflow-hidden border border-gray-300 focus-within:border-red-700 focus-within:ring-1 focus-within:ring-red-700 transition-all bg-white">
+              <span className="bg-gray-100 px-3.5 py-3 text-gray-600 font-bold border-r border-gray-300 flex items-center gap-1 shrink-0 text-sm">
+                🇵🇪 +51
+              </span>
+              <input 
+                type="tel" 
+                name="whatsapp" 
+                required 
+                maxLength={9}
+                value={whatsappInput}
+                onChange={handleWhatsappChange}
+                className="w-full px-4 py-3 outline-none text-gray-900 font-medium bg-transparent"
+                placeholder="999111222"
+              />
+            </div>
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Correo Electrónico *</label>
             <input 
               type="email" 
               name="email" 
@@ -80,7 +107,7 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña</label>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Contraseña *</label>
             <div className="relative">
               <input 
                 type={showPassword ? "text" : "password"} 

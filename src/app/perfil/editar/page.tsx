@@ -54,20 +54,34 @@ export default function EditarPerfilPage() {
   }, [router, supabase])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value })
+    // Si es el campo whatsapp, permitimos solo números
+    if (e.target.name === 'whatsapp') {
+      const onlyNums = e.target.value.replace(/[^0-9]/g, '')
+      setFormData({ ...formData, whatsapp: onlyNums })
+    } else {
+      setFormData({ ...formData, [e.target.name]: e.target.value })
+    }
   }
 
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSaving(true)
 
     const firstName = formData.firstName.trim()
     const lastName = formData.lastName.trim()
-    let cleanPhone = formData.whatsapp.replace(/\D/g, '')
-
-    if (cleanPhone.length === 9) {
-      cleanPhone = `51${cleanPhone}`
+    
+    // --- VALIDACIÓN ESTRICTA DE WHATSAPP PARA PERÚ ---
+    const whatsappRegex = /^9\d{8}$/;
+    
+    if (!whatsappRegex.test(formData.whatsapp)) {
+      toast.error('El celular debe tener 9 dígitos y empezar con 9 (Ej: 987654321)')
+      return // Bloquea el guardado
     }
+    // -------------------------------------------------
+
+    setIsSaving(true)
+
+    // Agregamos el prefijo 51 para la base de datos
+    const finalPhone = `51${formData.whatsapp}`
 
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -78,7 +92,7 @@ export default function EditarPerfilPage() {
         .update({
           first_name: firstName,
           last_name: lastName || null,
-          whatsapp: cleanPhone
+          whatsapp: finalPhone
         })
         .eq('id', user.id)
 
@@ -87,7 +101,7 @@ export default function EditarPerfilPage() {
         data: {
           first_name: firstName,
           last_name: lastName,
-          whatsapp: cleanPhone
+          whatsapp: finalPhone
         }
       })
 
