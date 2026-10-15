@@ -7,7 +7,6 @@ type Props = {
   params: Promise<{ id: string }> | { id: string }
 }
 
-// GENERACIÓN DINÁMICA DE METADATOS PARA WHATSAPP / OPENGRAPH
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const resolvedParams = await Promise.resolve(params)
   const cookieStore = await cookies()
@@ -31,14 +30,11 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     .single()
 
   if (!product) {
-    return {
-      title: 'Producto no encontrado | MecaStore',
-    }
+    return { title: 'Producto no encontrado | MecaStore' }
   }
 
   const primaryImage = product.product_images?.[0]?.image_url || 'https://mecastore.vercel.app/placeholder.png'
   const titleText = `${product.title} - S/ ${product.price.toFixed(2)}`
-  
   const descriptionText = product.description
     ? product.description.slice(0, 150).replace(/\n/g, ' ') + '...'
     : 'Disponible en MecaStore, el marketplace de ingeniería.'
@@ -51,14 +47,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description: descriptionText,
       url: `https://mecastore.vercel.app/producto/${resolvedParams.id}`,
       siteName: 'MecaStore',
-      images: [
-        {
-          url: primaryImage,
-          width: 800,
-          height: 600,
-          alt: product.title,
-        },
-      ],
+      images: [{ url: primaryImage, width: 800, height: 600, alt: product.title }],
       type: 'article',
     },
     twitter: {
@@ -70,7 +59,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 }
 
-// COMPONENTE PRINCIPAL DE SERVIDOR
 export default async function ProductDetailPage({ params }: Props) {
   const resolvedParams = await Promise.resolve(params)
   const cookieStore = await cookies()
@@ -105,15 +93,28 @@ export default async function ProductDetailPage({ params }: Props) {
     )
   }
 
-  // --- 3. INCREMENTAR EL CONTADOR DE VISITAS EN +1 ---
-  // Actualizamos sumando 1 al valor actual de views
-  await supabase
-    .from('products')
-    .update({ views: (product.views || 0) + 1 })
-    .eq('id', resolvedParams.id)
+  // 3. LÓGICA INTELIGENTE DE VISTAS (Evitar spam y auto-visitas)
+  const cookieName = `viewed_product_${resolvedParams.id}`
+  const hasViewedBefore = cookieStore.get(cookieName)
+  const isOwner = user && user.id === product.seller_id
 
-  // Actualizamos el objeto localmente para que ya refleje el número nuevo
-  product.views = (product.views || 0) + 1
+  // Solo sumamos si NO es el dueño y NO lo ha visitado recientemente en esta sesión
+  if (!isOwner && !hasViewedBefore) {
+    await supabase
+      .from('products')
+      .update({ views: (product.views || 0) + 1 })
+      .eq('id', resolvedParams.id)
+
+    product.views = (product.views || 0) + 1
+
+    // Guardamos una cookie que expire en 4 horas para que no vuelva a sumar por spam de recargas
+    cookieStore.set({
+      name: cookieName,
+      value: 'true',
+      maxAge: 60 * 60 * 4, // 4 horas
+      path: '/',
+    })
+  }
 
   // 4. Obtener imágenes
   const imgUrls = product.product_images?.map((img: any) => img.image_url) || ['/placeholder.png']
