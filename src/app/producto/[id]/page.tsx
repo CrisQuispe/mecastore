@@ -9,7 +9,6 @@ type Props = {
 
 // GENERACIÓN DINÁMICA DE METADATOS PARA WHATSAPP / OPENGRAPH
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  // Asegurarnos de que params sea resuelto si es una promesa
   const resolvedParams = await Promise.resolve(params)
   const cookieStore = await cookies()
   
@@ -38,12 +37,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const primaryImage = product.product_images?.[0]?.image_url || 'https://mecastore.vercel.app/placeholder.png'
-  
-  // CORRECCIÓN 1: Formatear el texto sin saltos de línea raros
   const titleText = `${product.title} - S/ ${product.price.toFixed(2)}`
   
   const descriptionText = product.description
-    ? product.description.slice(0, 150).replace(/\n/g, ' ') + '...' // Reemplazar saltos de línea con espacios para SEO
+    ? product.description.slice(0, 150).replace(/\n/g, ' ') + '...'
     : 'Disponible en MecaStore, el marketplace de ingeniería.'
 
   return {
@@ -75,7 +72,6 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // COMPONENTE PRINCIPAL DE SERVIDOR
 export default async function ProductDetailPage({ params }: Props) {
-  // Asegurarnos de que params sea resuelto si es una promesa
   const resolvedParams = await Promise.resolve(params)
   const cookieStore = await cookies()
   
@@ -109,10 +105,20 @@ export default async function ProductDetailPage({ params }: Props) {
     )
   }
 
-  // 3. Obtener imágenes
+  // --- 3. INCREMENTAR EL CONTADOR DE VISITAS EN +1 ---
+  // Actualizamos sumando 1 al valor actual de views
+  await supabase
+    .from('products')
+    .update({ views: (product.views || 0) + 1 })
+    .eq('id', resolvedParams.id)
+
+  // Actualizamos el objeto localmente para que ya refleje el número nuevo
+  product.views = (product.views || 0) + 1
+
+  // 4. Obtener imágenes
   const imgUrls = product.product_images?.map((img: any) => img.image_url) || ['/placeholder.png']
 
-  // 4. Verificar si está guardado por el usuario
+  // 5. Verificar si está guardado por el usuario
   let initialIsSaved = false
   if (user) {
     const { data: savedData } = await supabase
