@@ -6,7 +6,7 @@ import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-// --- COMPONENTE: TARJETA DE PRODUCTO CON CARRUSEL TIPO ALIEXPRESS Y CATEGORÍA DINÁMICA ---
+// --- COMPONENTE: TARJETA DE PRODUCTO MÁS COMPACTA EN LAPTOP/TABLET ---
 const ProductCard = ({ product, user }: { product: any, user: any }) => {
   const [currentImg, setCurrentImg] = useState(0)
   const images = product.product_images?.length > 0 
@@ -14,7 +14,7 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
     : ['/placeholder.png']
 
   const nextImage = (e: React.MouseEvent) => {
-    e.preventDefault() // Evita que se abra la página del producto al hacer clic en la flecha
+    e.preventDefault() 
     setCurrentImg((prev) => (prev + 1) % images.length)
   }
 
@@ -23,7 +23,6 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
     setCurrentImg((prev) => (prev - 1 + images.length) % images.length)
   }
 
-  // CÁLCULO DE CATEGORÍA MOSTRADA (Soporta "Otros - [Detalle]")
   const displayCategory = product.custom_category
     ? `Otros - ${product.custom_category}`
     : product.categories?.name || 'General'
@@ -32,24 +31,23 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
     <Link href={user ? `/producto/${product.id}` : '/auth/login'} className="group block h-full">
       <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
         
-        {/* IMAGEN DEL PRODUCTO */}
-        <div className="h-40 md:h-52 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100 group/image">
+        {/* IMAGEN DEL PRODUCTO (Altura reducida en desktop: h-32 md:h-36) */}
+        <div className="h-36 sm:h-32 md:h-36 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100 group/image">
           <img src={images[currentImg]} alt={product.title} className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-500" />
           
-          <div className="absolute top-2 right-2 bg-white/90 dark:bg-white/90 px-1.5 py-0.5 text-[10px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm z-10">
+          <div className="absolute top-1.5 right-1.5 bg-white/90 dark:bg-white/90 px-1 py-0.5 text-[9px] font-bold text-red-800 uppercase tracking-wider rounded shadow-sm z-10">
             {product.condition}
           </div>
 
-          {/* FLECHAS Y PUNTITOS (Solo si hay más de 1 imagen) */}
           {images.length > 1 && (
             <>
               <button onClick={prevImage} className="absolute left-1 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 rounded-full p-1 opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-white z-10 shadow-sm">
-                <ChevronLeft className="w-4 h-4" />
+                <ChevronLeft className="w-3 h-3" />
               </button>
               <button onClick={nextImage} className="absolute right-1 top-1/2 -translate-y-1/2 bg-white/80 text-gray-800 rounded-full p-1 opacity-0 group-hover/image:opacity-100 transition-opacity hover:bg-white z-10 shadow-sm">
-                <ChevronRight className="w-4 h-4" />
+                <ChevronRight className="w-3 h-3" />
               </button>
-              <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1 z-10">
+              <div className="absolute bottom-1.5 left-0 right-0 flex justify-center gap-1 z-10">
                 {images.map((_: any, i: number) => (
                   <div key={i} className={`w-1.5 h-1.5 rounded-full transition-colors ${i === currentImg ? 'bg-red-600 scale-110' : 'bg-white/70'}`} />
                 ))}
@@ -58,15 +56,15 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
           )}
         </div>
 
-        <div className="p-3 flex flex-col flex-grow">
-          <h3 className="text-xs md:text-sm text-gray-800 dark:text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
+        <div className="p-2.5 flex flex-col flex-grow">
+          <h3 className="text-xs text-gray-800 dark:text-gray-800 font-bold leading-tight line-clamp-2 mb-1 group-hover:text-red-800 transition-colors">
             {product.title}
           </h3>
-          <div className="text-base md:text-xl font-black text-gray-900 dark:text-gray-900 mb-1.5 mt-auto">
+          <div className="text-sm md:text-base font-black text-gray-900 dark:text-gray-900 mb-1.5 mt-auto">
             S/ {product.price.toFixed(2)}
           </div>
-          <div className="flex items-center gap-1 text-[10px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
-            <Tag className="w-3 h-3" />
+          <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
+            <Tag className="w-2.5 h-2.5" />
             <span className="truncate">{displayCategory}</span>
           </div>
         </div>
@@ -81,13 +79,11 @@ export default function HomePage() {
   const supabase = createClient()
   const router = useRouter()
   
-  // ESTADOS PRINCIPALES
   const [allProducts, setAllProducts] = useState<any[]>([]) 
   const [groupedProducts, setGroupedProducts] = useState<Record<string, any[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
   
-  // ESTADOS DE FILTRO Y BÚSQUEDA
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [availableCategories, setAvailableCategories] = useState<string[]>([])
@@ -106,7 +102,6 @@ export default function HomePage() {
         if (data) {
           setAllProducts(data)
           
-          // Obtener etiquetas únicas detalladas para la cinta de opciones superior (ej. "Otros - Logo", etc.)
           const uniqueCategories = Array.from(new Set(data.map(p => 
             p.custom_category ? `Otros - ${p.custom_category}` : (p.categories?.name || 'Otros')
           )))
@@ -133,11 +128,9 @@ export default function HomePage() {
       }
     }, [supabase])
 
-  // EFECTO PARA FILTRAR Y AGRUPAR EN TIEMPO REAL
   useEffect(() => {
     let filtered = allProducts
 
-    // 1. Filtrar por término de búsqueda (título)
     if (searchTerm.trim() !== '') {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(product => 
@@ -145,7 +138,6 @@ export default function HomePage() {
       )
     }
 
-    // 2. Filtrar por categoría seleccionada (en la cinta de opciones)
     if (selectedCategory) {
       filtered = filtered.filter(product => {
         const catLabel = product.custom_category
@@ -155,13 +147,10 @@ export default function HomePage() {
       })
     }
 
-    // 3. Volver a agrupar los resultados. 
-    // MODIFICACIÓN: Si la categoría base es "Otros" (o viene de custom_category), la agrupamos bajo la sección única "Otros".
     const grouped = filtered.reduce((acc, product) => {
       const rawCatName = product.categories?.name || 'Otros'
       const isOtros = rawCatName.toLowerCase().includes('otro') || product.custom_category
       
-      // Nombre de la sección principal en la página
       const sectionName = isOtros ? 'Otros' : rawCatName
       
       if (!acc[sectionName]) acc[sectionName] = []
@@ -238,7 +227,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. CINTA DE OPCIONES (CATEGORÍAS DINÁMICAS) */}
+      {/* 2. CINTA DE OPCIONES */}
       <div className="bg-white/80 dark:bg-white/80 border-b border-gray-200 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-8 text-xs font-bold text-gray-600 dark:text-gray-600 overflow-x-auto">
           <span 
@@ -272,11 +261,11 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4. CONTENIDO AGRUPADO Y FILTRADO */}
+      {/* 4. CONTENIDO (GRILLA ADAPTABLE: 2 col en celular, 4 en tablet, 5 en laptop y 6 en pantallas grandes) */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 animate-pulse">
-             {[1,2,3,4].map(i => <div key={i} className="h-64 bg-white/60 dark:bg-white/60 rounded-lg"></div>)}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 animate-pulse">
+             {[1,2,3,4,5].map(i => <div key={i} className="h-52 bg-white/60 dark:bg-white/60 rounded-lg"></div>)}
           </div>
         ) : Object.keys(groupedProducts).length === 0 ? (
           <div className="text-center bg-white dark:bg-white p-10 border border-gray-200 rounded-lg shadow-sm">
@@ -301,7 +290,8 @@ export default function HomePage() {
                 </h2>
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+              {/* AQUÍ ESTÁ EL CAMBIO DE TAMAÑO Y CANTIDAD DE COLUMNAS */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {items.map((product) => (
                   <ProductCard key={product.id} product={product} user={user} />
                 ))}
