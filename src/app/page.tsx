@@ -31,7 +31,7 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
     <Link href={user ? `/producto/${product.id}` : '/auth/login'} className="group block h-full">
       <div className="bg-white dark:bg-white border border-gray-200 hover:border-red-700 rounded-lg overflow-hidden transition-colors flex flex-col h-full shadow-sm">
         
-        {/* IMAGEN DEL PRODUCTO (Altura reducida en desktop: h-32 md:h-36) */}
+        {/* IMAGEN DEL PRODUCTO */}
         <div className="h-36 sm:h-32 md:h-36 w-full bg-gray-50 dark:bg-gray-50 relative overflow-hidden border-b border-gray-100 group/image">
           <img src={images[currentImg]} alt={product.title} className="w-full h-full object-cover group-hover/image:scale-105 transition-transform duration-500" />
           
@@ -102,9 +102,13 @@ export default function HomePage() {
         if (data) {
           setAllProducts(data)
           
-          const uniqueCategories = Array.from(new Set(data.map(p => 
-            p.custom_category ? `Otros - ${p.custom_category}` : (p.categories?.name || 'Otros')
-          )))
+          // MODIFICACIÓN: Unificamos cualquier categoría de tipo "Otros" o con custom_category para la barra superior
+          const uniqueCategories = Array.from(new Set(data.map(p => {
+            const rawName = p.categories?.name || 'Otros'
+            const isOtros = rawName.toLowerCase().includes('otro') || p.custom_category
+            return isOtros ? 'Otros' : rawName
+          })))
+          
           setAvailableCategories(uniqueCategories)
         }
         setIsLoading(false)
@@ -140,10 +144,10 @@ export default function HomePage() {
 
     if (selectedCategory) {
       filtered = filtered.filter(product => {
-        const catLabel = product.custom_category
-          ? `Otros - ${product.custom_category}`
-          : (product.categories?.name || 'Otros')
-        return catLabel === selectedCategory
+        const rawName = product.categories?.name || 'Otros'
+        const isOtros = rawName.toLowerCase().includes('otro') || product.custom_category
+        const sectionName = isOtros ? 'Otros' : rawName
+        return sectionName === selectedCategory
       })
     }
 
@@ -227,7 +231,7 @@ export default function HomePage() {
         </div>
       </nav>
 
-      {/* 2. CINTA DE OPCIONES */}
+      {/* 2. CINTA DE OPCIONES (AHORA LIMPIA CON "OTROS" UNIFICADO) */}
       <div className="bg-white/80 dark:bg-white/80 border-b border-gray-200 hidden md:block">
         <div className="max-w-7xl mx-auto px-4 py-2 flex items-center gap-8 text-xs font-bold text-gray-600 dark:text-gray-600 overflow-x-auto">
           <span 
@@ -261,7 +265,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* 4. CONTENIDO (GRILLA ADAPTABLE: 2 col en celular, 4 en tablet, 5 en laptop y 6 en pantallas grandes) */}
+      {/* 4. CONTENIDO */}
       <main className="max-w-7xl mx-auto px-4 py-8">
         {isLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 animate-pulse">
@@ -290,7 +294,6 @@ export default function HomePage() {
                 </h2>
               </div>
 
-              {/* AQUÍ ESTÁ EL CAMBIO DE TAMAÑO Y CANTIDAD DE COLUMNAS */}
               <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
                 {items.map((product) => (
                   <ProductCard key={product.id} product={product} user={user} />
