@@ -67,10 +67,10 @@ export default function VenderPage() {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files)
       
-      // 1. Validar peso original (Máximo 5MB para evitar colgar el navegador)
+      // 1. Validar peso original (Máximo 6MB para evitar colgar el navegador)
       const validFiles = newFiles.filter(file => {
-        if (file.size > 5 * 1024 * 1024) {
-          toast.error(`La imagen "${file.name}" supera los 5MB permitidos.`)
+        if (file.size > 6 * 1024 * 1024) {
+          toast.error(`La imagen "${file.name}" supera los 6MB permitidos.`)
           return false
         }
         return true
@@ -246,7 +246,7 @@ export default function VenderPage() {
         <form onSubmit={handlePublish} className="space-y-6">
           {/* FOTOS */}
           <div>
-            <label className="block text-sm font-bold text-gray-800 mb-2">Fotografías (Máx. 5, max 5MB c/u) *</label>
+            <label className="block text-sm font-bold text-gray-800 mb-2">Fotografías (Máx. 5, max 6MB c/u) *</label>
             
             <div className="flex gap-3">
               <label className={`flex-1 flex flex-col items-center justify-center h-28 border-2 border-dashed rounded-2xl transition-colors group ${isCompressing ? 'border-gray-200 bg-gray-50 cursor-not-allowed' : 'border-red-200 cursor-pointer bg-red-50/30 hover:bg-red-50'}`}>
