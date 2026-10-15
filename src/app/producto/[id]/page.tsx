@@ -78,42 +78,37 @@ export default async function ProductDetailPage({ params }: Props) {
   // 1. Obtener usuario actual
   const { data: { user } } = await supabase.auth.getUser()
 
-  // 2. Obtener producto y detalles
-  const { data: product } = await supabase
+  // 2. Obtener producto de forma directa y segura
+  const { data: product, error } = await supabase
     .from('products')
-    .select(`*, categories(name), product_images(image_url), profiles(whatsapp)`)
+    .select(`*, categories(name), product_images(image_url)`)
     .eq('id', resolvedParams.id)
     .single()
 
-  if (!product) {
+  if (error || !product) {
     return (
-      <div className="min-h-screen bg-[#fdf4f4] flex items-center justify-center font-bold">
-        Producto no encontrado.
+      <div className="min-h-screen bg-[#fdf4f4] flex items-center justify-center font-bold text-gray-800">
+        Producto no encontrado o error al cargar.
       </div>
     )
   }
 
-  // 3. LÓGICA INTELIGENTE DE VISTAS (Evitar spam y auto-visitas)
-  const cookieName = `viewed_product_${resolvedParams.id}`
-  const hasViewedBefore = cookieStore.get(cookieName)
-  const isOwner = user && user.id === product.seller_id
+  // 3. Obtener el perfil del vendedor por separado para evitar fallos de relación anidada
+  let sellerProfile = null
+  if (product.seller_id) {
+    const { data: profileData } = await supabase
+      .from('profiles')
+      .select('whatsapp')
+      .eq('id', product.seller_id)
+      .single()
+    
+    sellerProfile = profileData
+  }
 
-  // Solo sumamos si NO es el dueño y NO lo ha visitado recientemente en esta sesión
-  if (!isOwner && !hasViewedBefore) {
-    await supabase
-      .from('products')
-      .update({ views: (product.views || 0) + 1 })
-      .eq('id', resolvedParams.id)
-
-    product.views = (product.views || 0) + 1
-
-    // Guardamos una cookie que expire en 4 horas para que no vuelva a sumar por spam de recargas
-    cookieStore.set({
-      name: cookieName,
-      value: 'true',
-      maxAge: 60 * 60 * 4, // 4 horas
-      path: '/',
-    })
+  // Adjuntamos el perfil de forma segura al producto
+  const productWithProfile = {
+    ...product,
+    profiles: sellerProfile || { whatsapp: '' }
   }
 
   // 4. Obtener imágenes
@@ -134,7 +129,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
   return (
     <ProductDetailClient
-      product={product}
+      product={productWithProfile}
       images={imgUrls}
       initialIsSaved={initialIsSaved}
       currentUser={user}
