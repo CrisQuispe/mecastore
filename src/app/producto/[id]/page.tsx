@@ -9,8 +9,9 @@ type Props = {
 
 // GENERACIÓN DINÁMICA DE METADATOS PARA WHATSAPP / OPENGRAPH
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const resolvedParams = await params
-  const cookieStore = await cookies() // <-- Corrección: Se agregó await aquí
+  // Asegurarnos de que params sea resuelto si es una promesa
+  const resolvedParams = await Promise.resolve(params)
+  const cookieStore = await cookies()
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,9 +38,12 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const primaryImage = product.product_images?.[0]?.image_url || 'https://mecastore.vercel.app/placeholder.png'
+  
+  // CORRECCIÓN 1: Formatear el texto sin saltos de línea raros
   const titleText = `${product.title} - S/ ${product.price.toFixed(2)}`
+  
   const descriptionText = product.description
-    ? product.description.slice(0, 150) + '...'
+    ? product.description.slice(0, 150).replace(/\n/g, ' ') + '...' // Reemplazar saltos de línea con espacios para SEO
     : 'Disponible en MecaStore, el marketplace de ingeniería.'
 
   return {
@@ -71,8 +75,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 // COMPONENTE PRINCIPAL DE SERVIDOR
 export default async function ProductDetailPage({ params }: Props) {
-  const resolvedParams = await params
-  const cookieStore = await cookies() // <-- Corrección: Se agregó await aquí
+  // Asegurarnos de que params sea resuelto si es una promesa
+  const resolvedParams = await Promise.resolve(params)
+  const cookieStore = await cookies()
   
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

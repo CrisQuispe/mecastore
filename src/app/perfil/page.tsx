@@ -53,16 +53,45 @@ export default function PerfilPage() {
     router.push('/')
   }
 
+  // --- FUNCIÓN DE ELIMINACIÓN CON LIMPIEZA DE STORAGE (FOTOS FANTASMA) ---
   const handleDelete = async (id: string) => {
-    if (!window.confirm('¿Seguro que quieres eliminar esta publicación permanentemente?')) return
+    if (!window.confirm('¿Seguro que quieres eliminar esta publicación permanentemente? Las fotos también se borrarán.')) return
     
-    const { error } = await supabase.from('products').delete().eq('id', id)
-    
-    if (!error) {
+    const toastId = toast.loading('Eliminando publicación y fotos...')
+
+    try {
+      // 1. Obtener todas las imágenes de este producto para saber sus nombres de archivo
+      const { data: images } = await supabase
+        .from('product_images')
+        .select('image_url')
+        .eq('product_id', id)
+
+      // 2. Si hay imágenes, extraer la ruta del archivo y borrarlas del Storage
+      if (images && images.length > 0) {
+        const filePaths = images.map(img => {
+          // El image_url es un link largo, necesitamos extraer solo la ruta: "id_del_producto/nombre_foto.jpg"
+          // Normalmente las URLs de Supabase terminan en /storage/v1/object/public/product_images/RutaDelArchivo
+          const urlParts = img.image_url.split('/product_images/')
+          return urlParts.length > 1 ? urlParts[1] : null
+        }).filter(Boolean) as string[]
+
+        if (filePaths.length > 0) {
+          // Borrar los archivos físicos del Storage
+          await supabase.storage.from('product_images').remove(filePaths)
+        }
+      }
+
+      // 3. Ahora sí, borrar el producto de la base de datos (por "on delete cascade", esto debería borrar también las filas en product_images)
+      const { error } = await supabase.from('products').delete().eq('id', id)
+      
+      if (error) throw error
+
       setProducts(products.filter(p => p.id !== id))
-      toast.success('Publicación eliminada')
-    } else {
-      toast.error('Error al eliminar')
+      toast.success('Publicación eliminada correctamente', { id: toastId })
+      
+    } catch (error: any) {
+      console.error("Error al eliminar:", error)
+      toast.error('Error al eliminar la publicación', { id: toastId })
     }
   }
 

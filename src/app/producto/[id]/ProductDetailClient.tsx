@@ -33,6 +33,16 @@ export default function ProductDetailClient({
     return digits.length === 9 ? `51${digits}` : digits
   }
 
+  // --- NUEVA FUNCIÓN PARA EL LINK DE WHATSAPP A PRUEBA DE TROLLS ---
+  const getWhatsAppLink = () => {
+    const phone = getFormattedPhone(product.profiles?.whatsapp)
+    // Armamos el mensaje base
+    const rawMessage = `Hola, me interesa el producto "${product.title}" que vi en MecaStore.`
+    // Codificamos TODO el mensaje para que ningún símbolo (+, &, %, #, etc) rompa la URL
+    const encodedMessage = encodeURIComponent(rawMessage)
+    return `https://wa.me/${phone}?text=${encodedMessage}`
+  }
+
   // FUNCIÓN GUARDAR / QUITAR FAVORITO
   const toggleSave = async () => {
     if (!currentUser) {
@@ -175,9 +185,7 @@ export default function ProductDetailClient({
             <div className="mt-auto space-y-3">
               {/* WhatsApp */}
               <a
-                href={`https://wa.me/${getFormattedPhone(product.profiles?.whatsapp)}?text=Hola,%20me%20interesa%20el%20producto%20"${encodeURIComponent(
-                  product.title
-                )}"%20que%20vi%20en%20MecaStore.`}
+                href={getWhatsAppLink()} // Usamos la nueva función aquí
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-[#25D366] hover:bg-[#1EBE5C] text-white font-black py-4 rounded-xl shadow-lg shadow-[#25D366]/30 transition-all flex justify-center items-center gap-3 text-lg"

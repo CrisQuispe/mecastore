@@ -82,7 +82,7 @@ export default function HomePage() {
   const router = useRouter()
   
   // ESTADOS PRINCIPALES
-  const [allProducts, setAllProducts] = useState<any[]>([]) // Guardar todos los productos crudos
+  const [allProducts, setAllProducts] = useState<any[]>([]) 
   const [groupedProducts, setGroupedProducts] = useState<Record<string, any[]>>({})
   const [isLoading, setIsLoading] = useState(true)
   const [user, setUser] = useState<any>(null)
@@ -93,7 +93,6 @@ export default function HomePage() {
   const [availableCategories, setAvailableCategories] = useState<string[]>([])
 
   useEffect(() => {
-      // 1. Extraemos la función para poder llamarla cuando queramos
       const fetchInitialData = async () => {
         const { data: { user: currentUser } } = await supabase.auth.getUser()
         setUser(currentUser)
@@ -107,7 +106,7 @@ export default function HomePage() {
         if (data) {
           setAllProducts(data)
           
-          // Obtener categorías únicas reales para la cinta de opciones
+          // Obtener etiquetas únicas detalladas para la cinta de opciones superior (ej. "Otros - Logo", etc.)
           const uniqueCategories = Array.from(new Set(data.map(p => 
             p.custom_category ? `Otros - ${p.custom_category}` : (p.categories?.name || 'Otros')
           )))
@@ -116,31 +115,25 @@ export default function HomePage() {
         setIsLoading(false)
       }
 
-      // 2. Cargamos los datos por primera vez al entrar a la página
       fetchInitialData()
 
-      // 3. ¡LA MAGIA EN TIEMPO REAL! 
-      // Nos suscribimos a cualquier cambio (INSERT, UPDATE, DELETE) en la tabla 'products'
       const channel = supabase
         .channel('realtime-products')
         .on(
           'postgres_changes', 
           { event: '*', schema: 'public', table: 'products' }, 
-          (payload) => {
-            console.log('¡Cambio detectado en la base de datos!', payload)
-            // Cuando algo cambie (ej: borraste un producto), volvemos a traer los datos en silencio
+          () => {
             fetchInitialData()
           }
         )
         .subscribe()
 
-      // 4. Limpiamos la suscripción si el usuario sale de la página
       return () => {
         supabase.removeChannel(channel)
       }
     }, [supabase])
 
-  // EFECTO PARA FILTRAR EN TIEMPO REAL
+  // EFECTO PARA FILTRAR Y AGRUPAR EN TIEMPO REAL
   useEffect(() => {
     let filtered = allProducts
 
@@ -152,24 +145,27 @@ export default function HomePage() {
       )
     }
 
-    // 2. Filtrar por categoría seleccionada
+    // 2. Filtrar por categoría seleccionada (en la cinta de opciones)
     if (selectedCategory) {
       filtered = filtered.filter(product => {
-        const catName = product.custom_category
+        const catLabel = product.custom_category
           ? `Otros - ${product.custom_category}`
           : (product.categories?.name || 'Otros')
-        return catName === selectedCategory
+        return catLabel === selectedCategory
       })
     }
 
-    // 3. Volver a agrupar los resultados filtrados
+    // 3. Volver a agrupar los resultados. 
+    // MODIFICACIÓN: Si la categoría base es "Otros" (o viene de custom_category), la agrupamos bajo la sección única "Otros".
     const grouped = filtered.reduce((acc, product) => {
-      const catName = product.custom_category
-        ? `Otros - ${product.custom_category}`
-        : (product.categories?.name || 'Otros')
+      const rawCatName = product.categories?.name || 'Otros'
+      const isOtros = rawCatName.toLowerCase().includes('otro') || product.custom_category
       
-      if (!acc[catName]) acc[catName] = []
-      acc[catName].push(product)
+      // Nombre de la sección principal en la página
+      const sectionName = isOtros ? 'Otros' : rawCatName
+      
+      if (!acc[sectionName]) acc[sectionName] = []
+      acc[sectionName].push(product)
       return acc
     }, {} as Record<string, any[]>)
 
@@ -182,7 +178,6 @@ export default function HomePage() {
     router.refresh()
   }
 
-  // Icono dinámico según el nombre de la categoría (puedes agregar más según tus categorías)
   const getCategoryIcon = (catName: string) => {
     const name = catName.toLowerCase()
     if (name.includes('electr')) return <Cpu className="w-3 h-3"/>
