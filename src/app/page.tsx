@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, LogOut, Bookmark, ChevronLeft, Eye } from 'lucide-react'
+import { Search, Tag, ShoppingBag, ChevronRight, Grid, Cpu, Wrench, Code, User, LogOut, Bookmark, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
-// --- COMPONENTE: TARJETA DE PRODUCTO CON CONTADOR DE VISITAS ---
+// --- COMPONENTE: TARJETA DE PRODUCTO ---
 const ProductCard = ({ product, user }: { product: any, user: any }) => {
   const [currentImg, setCurrentImg] = useState(0)
   const images = product.product_images?.length > 0 
@@ -64,17 +64,9 @@ const ProductCard = ({ product, user }: { product: any, user: any }) => {
             S/ {product.price.toFixed(2)}
           </div>
           
-          <div className="flex items-center justify-between gap-1 mt-1">
-            <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit truncate">
-              <Tag className="w-2.5 h-2.5" />
-              <span className="truncate">{displayCategory}</span>
-            </div>
-            
-            {/* CONTADOR DE VISITAS EN LA TARJETA */}
-            <div className="flex items-center gap-1 text-[9px] font-bold text-gray-400">
-              <Eye className="w-3 h-3" />
-              <span>{product.views || 0}</span>
-            </div>
+          <div className="flex items-center gap-1 text-[9px] font-bold text-gray-500 dark:text-gray-500 bg-gray-50 dark:bg-gray-50 border border-gray-100 px-1.5 py-0.5 rounded w-fit">
+            <Tag className="w-2.5 h-2.5" />
+            <span className="truncate">{displayCategory}</span>
           </div>
         </div>
 

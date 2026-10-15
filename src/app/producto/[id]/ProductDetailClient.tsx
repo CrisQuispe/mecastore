@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, Bookmark, Share2, AlertTriangle } from 'lucide-react'
@@ -26,42 +26,6 @@ export default function ProductDetailClient({
   const [isSaved, setIsSaved] = useState(initialIsSaved)
   const [isSaving, setIsSaving] = useState(false)
 
-  // CONTADOR DE VISITAS SEGURO DESDE EL CLIENTE
-  useEffect(() => {
-    const registerView = async () => {
-      // Si el usuario logueado es el dueño, no sumamos vistas
-      const isOwner = currentUser && currentUser.id === product.seller_id
-      if (isOwner) return
-
-      // Usamos localStorage para evitar spam si la misma persona entra varias veces hoy
-      const viewKey = `viewed_product_${product.id}`
-      const lastViewed = localStorage.getItem(viewKey)
-      const now = new Date().getTime()
-
-      // Si pasaron menos de 4 horas desde la última vista registrada en este navegador, no sumamos
-      if (lastViewed && now - parseInt(lastViewed) < 1000 * 60 * 60 * 4) {
-        return
-      }
-
-      try {
-        // Incrementamos las vistas en Supabase de forma segura
-        const newViews = (product.views || 0) + 1
-        await supabase
-          .from('products')
-          .update({ views: newViews })
-          .eq('id', product.id)
-
-        // Guardamos el sello de tiempo en el navegador
-        localStorage.setItem(viewKey, now.toString())
-      } catch (err) {
-        console.error('Error al registrar vista:', err)
-      }
-    }
-
-    registerView()
-  }, [product.id, currentUser, product.seller_id, product.views, supabase])
-
-  // Resto de tus funciones...
   // FUNCIÓN PARA FORMATEAR EL NÚMERO DE WHATSAPP CON CÓDIGO DE PERÚ (+51)
   const getFormattedPhone = (phoneRaw: string | undefined | null) => {
     if (!phoneRaw) return '51999999999'
@@ -69,12 +33,10 @@ export default function ProductDetailClient({
     return digits.length === 9 ? `51${digits}` : digits
   }
 
-  // --- NUEVA FUNCIÓN PARA EL LINK DE WHATSAPP A PRUEBA DE TROLLS ---
+  // LINK DE WHATSAPP SEGURO
   const getWhatsAppLink = () => {
     const phone = getFormattedPhone(product.profiles?.whatsapp)
-    // Armamos el mensaje base
     const rawMessage = `Hola, me interesa el producto "${product.title}" que vi en MecaStore.`
-    // Codificamos TODO el mensaje para que ningún símbolo (+, &, %, #, etc) rompa la URL
     const encodedMessage = encodeURIComponent(rawMessage)
     return `https://wa.me/${phone}?text=${encodedMessage}`
   }
@@ -121,7 +83,6 @@ export default function ProductDetailClient({
         // El usuario canceló la acción
       }
     } else {
-      // Fallback: copiar al portapapeles
       await navigator.clipboard.writeText(window.location.href)
       toast.success('¡Enlace copiado al portapapeles!')
     }
@@ -151,7 +112,7 @@ export default function ProductDetailClient({
     }
   }
 
-  // CÁLCULO DE CATEGORÍA MOSTRADA (Soporta "Otros - [Texto]")
+  // CÁLCULO DE CATEGORÍA MOSTRADA
   const displayCategory = product.custom_category
     ? `Otros - ${product.custom_category}`
     : product.categories?.name || 'General'
@@ -221,7 +182,7 @@ export default function ProductDetailClient({
             <div className="mt-auto space-y-3">
               {/* WhatsApp */}
               <a
-                href={getWhatsAppLink()} // Usamos la nueva función aquí
+                href={getWhatsAppLink()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full bg-[#25D366] hover:bg-[#1EBE5C] text-white font-black py-4 rounded-xl shadow-lg shadow-[#25D366]/30 transition-all flex justify-center items-center gap-3 text-lg"
